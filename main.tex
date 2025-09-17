@@ -1,5 +1,5 @@
 \documentclass[12pt]{article}
-\usepackage{amssymb,amsmath,amsfonts,eurosym,geometry,ulem,graphicx,caption,color,setspace,sectsty,comment,natbib,footmisc,pdflscape,subfigure,array,hyperref,booktabs,hypcap,siunitx,threeparttable}
+\usepackage{amssymb,amsmath,amsfonts,eurosym,geometry,ulem,graphicx,caption,color,setspace,sectsty,comment,natbib,footmisc,pdflscape,subfigure,array,hyperref,booktabs,hypcap,siunitx,threeparttable,rotating}
 
 
 \normalem
@@ -53,6 +53,19 @@
 \section{Introduction} \label{sec:introduction}
 
 \section{Literature Review} \label{sec:literature}
+
+\section{Data} \label{sec:data}
+We obtain the equity and index option data from the IvyDB OptionMetrics database, which provides Volatility Surface files (vsurfdYYYY) that contain the interpolated Black-Scholes implied volatilities, starting from January 1996. For each security on each day, a volatility surface with standard maturities of $\tau$ days to expiration and moneyness levels measured by option $\delta$ is provided. \footnote{OptionMetrics use a methodology based on a kernel smoothing algorithm to interpolate the volatility surface. The maturities are 10, 30, 60, 91, 122, 152, 182, 365, 547, 730 days to expiration, and the option delta levels are from 0.1 to 0.9 with a step of 0.05, positive for call options and negative for put options.}
+
+We select out-of-the-money (OTM) and near at-the-money (ATM) put options with delta levels in [-0.5, -0.1], as well as OTM and near ATM call options with delta levels in [0.1, 0.5], since the deep-in-the-money call options are often illiquid, following \citet{martinWhatExpectedReturn2017}, among others. The options are rearranged by their moneyness (implied strike), so the delta levels start from -0.1 to -0.5, then from 0.5 to 0.1 \footnote{The implied strike order between put option with delta -0.5 and call option with delta 0.5 is uncertain, but their spread is proved to have predictive power for future returns \citep{yanJumpRiskStock2011}, so we keep both of them.}. We also drop the options with maturities equal to 10 days, since the large fraction of missing values. The final volatility surface data contains 10 maturities and 18 delta levels, and a example of the volatility surface is shown in Figure \ref{fig:vsurf_3d_plot}. The input features, in result, can be represented as a vector $\left(IV_{i, t}, IV_{spx,t}\right)$, where $IV_{i, t} = \{IV_{i,t}(\tau, \delta)\}_{\tau \in T, \delta \in \Delta}$ is the volatility surface of stock $i$ at time $t$, and $IV_{spx, t} = \{IV_{i, t}(\tau, \delta)\}_{\tau \in T, \delta \in \Delta}$ is the volatility surface of the S$\&$P 500 index at time $t$.
+
+
+We obtain the daily return data from CRSP for all firms listed on NYSE, AMEX, and NASDAQ, as well as the S$\&$P 500 index. For each security $i$ at time $t$, we calculate the cumulative return on security $i$ from day $t$ to day $t+H$ as:
+\begin{align}
+    r_{i,t}^H = \prod_{j=0}^{H-1} (1 + r_{i,t+j}) - 1
+\end{align}
+
+We link the volatility surface data from OptionMetrics with the return data from CRSP using a linking table provided by WRDS. The final dataset spans from January 1996 to August 2023, and Figure \ref{fig:num_stocks_vsurf} shows the number of stocks with volatility surface data over time.
 
 \section{The Vision Transformer Model} \label{sec:model}
 In this section, we briefly introduce the vision transformer (ViT) model architecture and our experimental design.
@@ -158,19 +171,6 @@ We adopt similar regularization techniques as in \citet{guEmpiricalAssetPricing2
 We train each model using annually updated rolling window, given the time-varying universe of stocks in \ref{fig:num_stocks_vsurf}. Specifically, we use a 8-year in-sample period, with 6 years for training and 2 years for validation, to predict the out-of-sample returns for the subsequent year. The first training period starts from January 1996 to December 2003, and the trained model is then used to predict out-of-sample returns for the subsequent year 2004. The model is then updated with the data from 2004, and used to predict out-of-sample returns for 2005. This process continues until August 2023, the last month of our dataset. Overall, the out-of-sample prediction period is from January 2004 to August 2023, which contains around 20 years of results.
 
 \section{Empirical Results} \label{sec:result}
-\subsection{Data} \label{sec:data}
-We obtain the equity and index option data from the IvyDB OptionMetrics database, which provides Volatility Surface files (vsurfdYYYY) that contain the interpolated Black-Scholes implied volatilities, starting from January 1996. For each security on each day, a volatility surface with standard maturities of $\tau$ days to expiration and moneyness levels measured by option $\delta$ is provided. \footnote{OptionMetrics use a methodology based on a kernel smoothing algorithm to interpolate the volatility surface. The maturities are 10, 30, 60, 91, 122, 152, 182, 365, 547, 730 days to expiration, and the option delta levels are from 0.1 to 0.9 with a step of 0.05, positive for call options and negative for put options.}
-
-We select out-of-the-money (OTM) and near at-the-money (ATM) put options with delta levels in [-0.5, -0.1], as well as OTM and near ATM call options with delta levels in [0.1, 0.5], since the deep-in-the-money call options are often illiquid, following \citet{martinWhatExpectedReturn2017}, among others. The options are rearranged by their moneyness (implied strike), so the delta levels start from -0.1 to -0.5, then from 0.5 to 0.1 \footnote{The implied strike order between put option with delta -0.5 and call option with delta 0.5 is uncertain, but their spread is proved to have predictive power for future returns \citep{yanJumpRiskStock2011}, so we keep both of them.}. We also drop the options with maturities equal to 10 days, since the large fraction of missing values. The final volatility surface data contains 10 maturities and 18 delta levels, and a example of the volatility surface is shown in Figure \ref{fig:vsurf_3d_plot}. The input features, in result, can be represented as a vector $\left(IV_{i, t}, IV_{spx,t}\right)$, where $IV_{i, t} = \{IV_{i,t}(\tau, \delta)\}_{\tau \in T, \delta \in \Delta}$ is the volatility surface of stock $i$ at time $t$, and $IV_{spx, t} = \{IV_{i, t}(\tau, \delta)\}_{\tau \in T, \delta \in \Delta}$ is the volatility surface of the S$\&$P 500 index at time $t$.
-
-
-We obtain the daily return data from CRSP for all firms listed on NYSE, AMEX, and NASDAQ, as well as the S$\&$P 500 index. For each security $i$ at time $t$, we calculate the cumulative return on security $i$ from day $t$ to day $t+H$ as:
-\begin{align}
-    r_{i,t \rightarrow t+H} = \prod_{j=0}^{H-1} (1 + r_{i,t+j}) - 1
-\end{align}
-
-We link the volatility surface data from OptionMetrics with the return data from CRSP using a linking table provided by WRDS. The final dataset spans from January 1996 to August 2023, and Figure \ref{fig:num_stocks_vsurf} shows the number of stocks with volatility surface data over time.
-
 \subsection{Directional Prediction of Stock Returns} \label{sec:binary}
 
 \subsection{Crash Prediction} \label{sec:crash}
@@ -197,84 +197,139 @@ We link the volatility surface data from OptionMetrics with the return data from
 
 \begin{table}[htbp]
 \centering
+\small
 \sisetup{
     table-align-text-post=false,
     input-symbols = {(),-},
     table-space-text-pre = {(},
-    table-space-text-post = {)} 
+    table-space-text-post = {)},
+    input-open-uncertainty = {(},
+    input-close-uncertainty = {)}
 }
+\setlength{\tabcolsep}{4pt}
+\caption{Portfolio Analysis, Binary Classification Model, All Stocks}
+\label{tab:portfolio_binary_full}
 \begin{threeparttable}
 \input{Tables/portfolio_binary_full.tex}
 % \begin{tablenotes}
 %     \footnotesize
 %     \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
 % \end{tablenotes}
-\caption{Portfolio Analysis of the Binary Classification Model (Up and Down), All Stocks}
-\label{tab:portfolio_binary_full}
 \end{threeparttable}
 \end{table}
 
 
-\begin{table}[htbp]
+\begin{sidewaystable}[htbp]
 \centering
+\setlength{\tabcolsep}{4pt}
+\small
 \sisetup{
     table-align-text-post=false,
     input-symbols = {(),-},
     table-space-text-pre = {(},
     table-space-text-post = {)} 
 }
-\begin{threeparttable}
-\input{Tables/portfolio_binary_nm.tex}
-% \begin{tablenotes}
-%     \footnotesize
-%     \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
-% \end{tablenotes}
-\caption{Portfolio Analysis of the Binary Classification Model (Up and Down), Non-Micro Stocks}
-\label{tab:portfolio_binary_nm}
-\end{threeparttable}
-\end{table}
+\caption{Correlation Analysis, Binary Classification Model, All Stocks}
+\input{Tables/corr_binary.tex}
+\label{tab:corr_binary}
+\end{sidewaystable}
 
 
 \begin{table}[htbp]
 \centering
+\setlength{\tabcolsep}{4pt}
+\small
 \sisetup{
     table-align-text-post=false,
     input-symbols = {(),-},
     table-space-text-pre = {(},
     table-space-text-post = {)} 
 }
+\caption{Portfolio Characteristics, Binary Classification Model, All Stocks}
+\label{tab:port_char_binary}
 \begin{threeparttable}
-\input{Tables/portfolio_binary_micro.tex}
-% \begin{tablenotes}
-%     \footnotesize
-%     \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
-% \end{tablenotes}
-\caption{Portfolio Analysis of the Binary Classification Model (Up and Down), Micro Stocks}
-\label{tab:portfolio_binary_micro}
+\input{Tables/port_char_binary.tex}
+
+\end{threeparttable}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{2pt}
+\small
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)}
+}
+\caption{Time Series Regression, Binary Classification Model, All Stocks}
+\label{tab:ts_reg_binary_full}
+\begin{threeparttable}
+\input{Tables/ts_reg_binary_full.tex}
 \end{threeparttable}
 \end{table}
 
 
 \begin{table}[htbp]
 \centering
+\setlength{\tabcolsep}{6pt}
+\small
 \sisetup{
     table-align-text-post=false,
     input-symbols = {(),-},
     table-space-text-pre = {(},
     table-space-text-post = {)} 
 }
+\caption{Fama-MacBeth Regression, Binary Classification Model, All Stocks}
+\label{tab:fm_reg_binary_full}
 \begin{threeparttable}
-\input{Tables/portfolio_binary_sp.tex}
-% \begin{tablenotes}
-%     \footnotesize
-%     \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
-% \end{tablenotes}
-\caption{Portfolio Analysis of the Binary Classification Model (Up and Down), S\&P Constituents}
-\label{tab:portfolio_binary_sp}
+\input{Tables/fm_reg_binary_full.tex}
 \end{threeparttable}
 \end{table}
+
+
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{6pt}
+\small
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Logistic Regression, Future Stock Return}
+\label{tab:logistic_reg_binary_full}
+\begin{threeparttable}
+\input{Tables/logistic_reg_binary_full.tex}
+\end{threeparttable}
+\end{table}
+
+
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{1pt}
+\small
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Logistic Regression, Future Stock Crash}
+\label{tab:logistic_reg_crash_full}
+\begin{threeparttable}
+\input{Tables/logistic_reg_crash_full.tex}
+\end{threeparttable}
+\end{table}
+
+
 
 \clearpage
+
+
+% ------------------------------- Figures ------------------------------- %
 
 \section*{Figures} \label{sec:fig}
 \addcontentsline{toc}{section}{Figures}
@@ -315,6 +370,19 @@ We link the volatility surface data from OptionMetrics with the return data from
     \label{fig:channel_vit_figure}
 \end{figure}
 
+\begin{figure}[hp]
+    \centering
+    \includegraphics[width=1\textwidth]{Figures/cumlogret_binary_full.png}
+    \caption{Cumulative Log Return}
+    \label{fig:cumlogret_binary_full}
+\end{figure}
+
+\begin{figure}[hp]
+    \centering
+    \includegraphics[width=1\textwidth]{Figures/cumlogret_binary_sp.png}
+    \caption{Cumulative Log Return, S\&P 500 Stocks}
+    \label{fig:cumlogret_binary_sp}
+\end{figure}
 
 
 
@@ -324,6 +392,99 @@ We link the volatility surface data from OptionMetrics with the return data from
 \section*{Appendix A. Placeholder} \label{sec:appendixa}
 \addcontentsline{toc}{section}{Appendix A}
 
+\section*{Appendix B. Additional Results} \label{sec:appendixb}
+\addcontentsline{toc}{section}{Appendix B}
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Portfolio Analysis, Binary Classification Model, Non-Micro Stocks}
+\label{tab:portfolio_binary_nm}
+\begin{threeparttable}
+\input{Tables/portfolio_binary_nm.tex}
+% \begin{tablenotes}
+%     \footnotesize
+%     \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
+% \end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Portfolio Analysis, Binary Classification Model, S\&P 500 Stocks}
+\label{tab:portfolio_binary_micro}
+\begin{threeparttable}
+\input{Tables/portfolio_binary_sp.tex}
+\end{threeparttable}
+\end{table}
+
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Time Series Regression, Binary Classification Model, Non-Micro Stocks}
+\label{tab:ts_reg_binary_nm}
+\begin{threeparttable}
+\resizebox{\textwidth}{!}{\input{Tables/ts_reg_binary_nm.tex}}
+\end{threeparttable}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Time Series Regression, Binary Classification Model, S\&P 500 Stocks}
+\label{tab:ts_reg_binary_large}
+\begin{threeparttable}
+\resizebox{\textwidth}{!}{\input{Tables/ts_reg_binary_sp.tex}}
+\end{threeparttable}
+\end{table}
+
+% \begin{table}[htbp]
+% \centering
+% \small
+% \setlength{\tabcolsep}{6pt}
+% \sisetup{
+%     table-align-text-post=false,
+%     input-symbols = {(),-},
+%     table-space-text-pre = {(},
+%     table-space-text-post = {)} 
+% }
+% \caption{Fama-MacBeth Regression, Binary Classification Model, Non-Micro Stocks}
+% \label{tab:fm_reg_binary_nm}
+% \begin{threeparttable}
+% \input{Tables/fm_reg_binary_nm.tex}
+% \end{threeparttable}
+% \end{table}
 
 
 \end{document}
