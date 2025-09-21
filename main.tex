@@ -26,8 +26,8 @@
 \begin{document}
 
 \begin{titlepage}
-\title{Transformer-IVS\thanks{abc}}
-\author{Zhenqi Hu\thanks{abc}}
+\title{Recovering Predictability from the Implied Volatility Surface: A Vision Transformer Approach\thanks{abc}}
+% \author{Zhenqi Hu\thanks{abc}}
 \date{\today}
 \maketitle
 \begin{abstract}
@@ -57,7 +57,7 @@
 \section{Data} \label{sec:data}
 We obtain the equity and index option data from the IvyDB OptionMetrics database, which provides Volatility Surface files (vsurfdYYYY) that contain the interpolated Black-Scholes implied volatilities, starting from January 1996. For each security on each day, a volatility surface with standard maturities of $\tau$ days to expiration and moneyness levels measured by option $\delta$ is provided. \footnote{OptionMetrics use a methodology based on a kernel smoothing algorithm to interpolate the volatility surface. The maturities are 10, 30, 60, 91, 122, 152, 182, 365, 547, 730 days to expiration, and the option delta levels are from 0.1 to 0.9 with a step of 0.05, positive for call options and negative for put options.}
 
-We select out-of-the-money (OTM) and near at-the-money (ATM) put options with delta levels in [-0.5, -0.1], as well as OTM and near ATM call options with delta levels in [0.1, 0.5], since the deep-in-the-money call options are often illiquid, following \citet{martinWhatExpectedReturn2017}, among others. The options are rearranged by their moneyness (implied strike), so the delta levels start from -0.1 to -0.5, then from 0.5 to 0.1 \footnote{The implied strike order between put option with delta -0.5 and call option with delta 0.5 is uncertain, but their spread is proved to have predictive power for future returns \citep{yanJumpRiskStock2011}, so we keep both of them.}. We also drop the options with maturities equal to 10 days, since the large fraction of missing values. The final volatility surface data contains 10 maturities and 18 delta levels, and a example of the volatility surface is shown in Figure \ref{fig:vsurf_3d_plot}. The input features, in result, can be represented as a vector $\left(IV_{i, t}, IV_{spx,t}\right)$, where $IV_{i, t} = \{IV_{i,t}(\tau, \delta)\}_{\tau \in T, \delta \in \Delta}$ is the volatility surface of stock $i$ at time $t$, and $IV_{spx, t} = \{IV_{i, t}(\tau, \delta)\}_{\tau \in T, \delta \in \Delta}$ is the volatility surface of the S$\&$P 500 index at time $t$.
+We select out-of-the-money (OTM) and near at-the-money (ATM) put options with delta levels in [-0.5, -0.1], as well as OTM and near ATM call options with delta levels in [0.1, 0.5], since the deep-in-the-money call options are often illiquid, following \citet{martinWhatExpectedReturn2017}, among others. The options are rearranged by their moneyness (implied strike), so the delta levels start from -0.1 to -0.5, then from 0.5 to 0.1 \footnote{The implied strike order between put option with delta -0.5 and call option with delta 0.5 is uncertain, but their spread is proved to have predictive power for future returns \citep{yanJumpRiskStock2011}, so we keep both of them.}. We also drop the options with maturities equal to 10 days, since the large fraction of missing values. The final volatility surface data contains 10 maturities and 18 delta levels, and a example of the volatility surface is shown in Figure \ref{fig:vsurf_3d_plot}. The input features, in result, can be represented as $IV_{i, t} = \{IV_{i,t}(\tau, \delta)\}_{\tau \in T, \delta \in \Delta}$. the volatility surface of security $i$ at time $t$.
 
 
 We obtain the daily return data from CRSP for all firms listed on NYSE, AMEX, and NASDAQ, as well as the S$\&$P 500 index. For each security $i$ at time $t$, we calculate the cumulative return on security $i$ from day $t$ to day $t+H$ as:
@@ -65,7 +65,7 @@ We obtain the daily return data from CRSP for all firms listed on NYSE, AMEX, an
     r_{i,t}^H = \prod_{j=0}^{H-1} (1 + r_{i,t+j}) - 1
 \end{align}
 
-We link the volatility surface data from OptionMetrics with the return data from CRSP using a linking table provided by WRDS. The final dataset spans from January 1996 to August 2023, and Figure \ref{fig:num_stocks_vsurf} shows the number of stocks with volatility surface data over time.
+We link the volatility surface data from OptionMetrics with the return data from CRSP using a linking table provided by WRDS. The final dataset spans from January 1996 to August 2023, and Figure \ref{fig:num_stocks_vsurf} shows the coverage of the stocks with available volatility surface data over time. The number of stocks with available volatility surface data increases significantly over time, from below 1000 to over 5000 in recent years.
 
 \section{The Vision Transformer Model} \label{sec:model}
 In this section, we briefly introduce the vision transformer (ViT) model architecture and our experimental design.
@@ -129,52 +129,79 @@ The architecture of the ViT, shown in Figure \ref{fig:vit_figure}, adapts the or
 \end{enumerate}
 
 \subsection{Image Representation of Option-Implied Volatility Surface} \label{sec:embedding}
-An option-implied volatility surface is a three-dimensional plot that displays the implied volatility of a stock or index options across different strike prices and expirations, which we take as the input image for the ViT model. For each stock $i$ at time $t$, we choose the both the volatility surface of stock's options $IV_{i, t}$ and the volatility surface of the S$\&$P 500 index options $IV_{spx, t}$ as the input features, since the index options contain essential information of market risk and risk permia \citep{andersenRiskPremiaEmbedded2015}.
+In the computer vision (CV) field, a image is typically represented as a three-dimensional matrix with $(C, H, W)$ dimensions, where $C$ is the number of channels (e.g., $C=3$ for RGB images, and $C=1$ for grayscale images), $H$ is the height (number of pixels in vertical direction), and $W$ is the width (number of pixels in horizontal direction). Each pixel in the image has a value ranging from 0 to 255, representing the intensity of the color channel(s) at that pixel.
 
-We can regard the two volatility surfaces as two channels of a informational "image", since they can be represented as a similar matrix with the same height and width (moneyness and maturity). However, unlike a standard RGB images, the two channels/surfaces contain semantically distinct and independent information, which is a challenge for the standard ViT model. Inspired by \cite{baoChannelVisionTransformers2024}, we use the so-called Channel ViT model for the embedding of the volatility surfaces. 
+An option-implied volatility surface is a three-dimensional plot that displays the implied volatility of a security options across different strike prices and expirations (Figure \ref{fig:vsurf_3d_plot}). As shown in Figure \ref{fig:vsurf_heatmap}, the volatility surface can also be represented as a two-dimensional matrix, which is anlogous to a single-channel grayscale image. The height $H$ of the matrix corresponds to the number of maturities $N_{\tau}$, and the width $W$ corresponds to the number of moneyness levels $N_{\delta}$. In our dataset (described in Section \ref{sec:data}), the volatility surface contains 10 maturities and 18 moneyness levels, so we can reshape the volatility surface into a "image-like" matrix with dimensions $(C, H, W) = (1, 10, 18)$. The pixel values in the matrix are the corresponding implied volatility levels, which are standardized to have zero mean and unit variance before being fed into the ViT model, just like standard image preprocessing in the computer vision field.
 
+Besides the implied volatility surface of individual stocks, we also consider the implied volatility surface of the S$\&$P 500 index options as an additional input. The index options contain essential information of market-wide risk and risk premia, in time series as well as in cross-section, providing incremental predictive power for the stock returns \citep{andersenRiskPremiaEmbedded2015,angCrossSectionVolatilityExpected2006}. The index volatility surface, in hence, can serve as an additional channel for the input volatility surface "image". However, unlike standard RGB images, where the three channels (Red, Green, Blue) contain correlated and complementary information about the same object, the two implied volatility surfaces in our case contain semantically distinct and independent information. This poses a challenge for the standard ViT model, which is designed to process images with correlated channels. Inspired by \cite{baoChannelVisionTransformers2024}, we use the so-called Channel ViT model for the embedding of the multiple volatility surfaces. 
 
-The ViT model, except the final classification head, can be viewed as a non-linear mapping $ViT(\cdot | \theta)$ from the input image to a D dimensional vector representation:
+Specifically, the Channel ViT model, shown in Figure \ref{fig:channel_vit_figure}, processes each input channel (volatility surface) independently in the embedding stage. Each channel (volatility surface) is split into patches, linearly embedded, and employs a set of learnable channel embeddings to encode the channel-specific information besides the positional embeddings. The resulting sequence of vectors from all channels is then concatenated and fed into a standard Transformer encoder, similar to the original ViT model. Since the two volatility surfaces have the exactly the same structure (same maturities and moneyness levels), they share a common positional encoding matrix.
+
+The ViT model, except for the final classification head, can be viewed as a non-linear mapping $ViT(\cdot | \theta)$ from the input image (volatility surface) to a dense vector representation of the image: 
 \begin{align}
-    v_{i, t} = ViT(IV_{i, t}, IV_{spx, t}| \theta)
+    \mathbf{v}_{i, t} = \mathbf{ViT}(IV_{t} | \theta)
 \end{align}
-Where $IV_{i, t}$ is the volatility surface of stock $i$ at time $t$, and $IV_{spx, t}$ is the volatility surface of the S$\&$P 500 index at time $t$. $v_{i, t} \in \mathbb{R}^{D}$ is vector representation of the information contained in the volatility surfaces, and $\theta$ is the set of parameters of the ViT model.
+Where $IV_{t} = IV_{i, t}$ or $IV_{t} = (IV_{i, t}, IV_{spx, t})$ depending on whether we use single or multiple volatility surfaces as input. Here, $IV_{i, t}$ is the volatility surface of stock $i$ at time $t$, and $IV_{spx, t}$ is the volatility surface of the S$\&$P 500 index at time $t$. $\mathbf{v}_{i, t} \in \mathbb{R}^{D}$ is vector representation of the information contained in the volatility surfaces, and $\theta$ is the set of parameters of the ViT model, excluding the final classification head.
 
 \subsection{Discretization of Return} \label{sec:classification}
-The simplest classification is the binary classification, where the number of classes $K=2$. For example, we can classify the stock return into "up" and "down" classes based on whether the future return is positive or negative,
-or classify the stock return into "crash" and "non-crash" classes based on whether the future return is below a certain negative threshold $q$ (e.g., -10\%). Denote $y_{i, t}$ as the binary variable (e.g. $y_{i, t} = \mathbb{I}(r_{i, t \rightarrow t+H} > 0)$ for up and down classification, or $y_{i, t} = \mathbb{I}(r_{i, t \rightarrow t+H} < q)$ for crash and non-crash classification), the output of the classification head can be expressed as:
-\begin{align}
-    \mathbb{E}(y_{i,t} | IV_{i, t}, IV_{spx, t}) &= \sigma(v_{i, t}' W_c + b_c) \\
-    \sigma(x) &= \frac{1}{1 + e^{-x}}
-\end{align}
-where $\sigma(\cdot)$ is the logistic(sigmoid) function, $W_c \in \mathbb{R}^{D}$ and $b_c \in \mathbb{R}^{1}$ are the weights and bias of the classification head.
 
-For multi-class classification
+Utilizing the dense vector representation $\mathbf{v}_{i, t}$ obtained from the ViT model, a classification head is attached to perform classification tasks. In our study, such a classification head is a single linear layer followed by a softmax function \footnote{In the original ViT paper, \citet{dosovitskiyImageWorth16x162020} used a multi-layer perceptron (MLP) with one hidden layer at pre-training time and used a single linear layer at fine-tuning time. A recent update, \citet{beyerBetterPlainViT2022} from some of the same authors of the original paper suggests that a simple linear layer at the end is not significantly worse than an MLP. We use a single linear layer for simplicity reason.}, which maps the vector representation $\mathbf{v}_{i, t}$ to a probability distribution over the classes:
 \begin{align}
-    \mathbf{p}_{i,t} &= \text{softmax}(v_{i, t}' W_c + b_c) \\
-    \text{softmax}(\mathbf{x})_j &= \frac{e^{x_j}}{\sum_{k=1}^{K} e^{x_k}}, \quad j = 1, ..., K
+\mathbf{p}_{i,t} &= \text{softmax}(W_c \cdot \mathbf{v}_{i, t} + b_c) \\
+\text{softmax}(\mathbf{x})_j &= \frac{e^{x_j}}{\sum_{k=1}^{K} e^{x_k}}, \quad j = 1, ..., K
 \end{align}
-where $W_c \in \mathbb{R}^{D \times K}$ and $b_c \in \mathbb{R}^{K}$ are the weights and bias of the classification head, and $K$ is the number of classes. The output $\mathbf{p}_{i,t} \in \mathbb{R}^{K}$ is a probability vector, where each element $\mathbf{p}_{i,t}^k$ represents the predicted probability of stock $i$'s return falling into class $k$ at time $t$.
+where $W_c \in \mathbb{R}^{K \times D}$ and $b_c \in \mathbb{R}^{K}$ are the weights and bias of the classification head, and $K$ is the number of classes. The output $\mathbf{p}_{i,t} \in \mathbb{R}^{K}$ is a probability vector, where each element $\mathbf{p}_{i,t}(k)$ represents the predicted probability of stock $i$'s return falling into class $k$ at time $t$.
+
+The simplest classification is the binary classification, where the number of classes $K=2$. For example, we can classify the stock return into "up" and "down" classes based on whether the future return is positive or negative, as in \citet{jiangReImaginingPriceTrends2023}. Alternatively, the stock return can be classified into "safe" and "crash" classes based on whether the future return is above a certain negative value (e.g., -10\%). In general, we denote $y_{i, t}$ as the binary variable indicating whether stock $i$'s return falls into the two classes defined by a specific threshold $q$ at time $t$:
+\begin{align}
+    y_{i, t} &= \mathbf{I}(r_{i,t}^H > q) =
+    \begin{cases}
+    1, & \text{if } r_{i,t}^H > q \\
+    0, & \text{if } r_{i,t}^H \leq q
+    \end{cases} \\
+    \hat{y}_{i,t} &= \mathbf{p}_{i,t}(1)
+\end{align}
+where $r_{i,t}^H$ is the cumulative return of stock $i$ from day $t$ to day $t+H$, and the output $\hat{y}_{i,t} = \mathbf{p}_{i,t}(1)$ represents the predicted probability of stock $i$'s return being in class 1 at time $t$.  The threshold $q$ can be set to 0 for the "up/down" classification. \footnote{In the special case of binary classification ($K=2$), the softmax function reduces to the logistic (sigmoid) function.}
+
+For multi-class classification ($K > 2$), the stock returns can be discretized into multiple classes based on quantiles or specific thresholds. Assume $\{q_0, q_1, ..., q_K\}$ are the thresholds that define the $K$ classes, where $q_0 = -\infty$ and $q_K = +\infty$. In general, we denote $y_{i, t}$ as the categorical variable indicating which class stock $i$'s return falls into at time $t$:
+\begin{align}
+    y_{i, t} &= k, \quad \text{if } r_{i,t}^H \in (q_{k-1}, q_k], \quad k = 1, 2, ..., K \\
+    \hat{y}_{i,t}^k &= \mathbf{p}_{i,t}(k)
+\end{align}
 
 \subsection{Training Process} \label{sec:training}
-We use standard cross-entropy loss function for the classification problem, which is defined as:
+We use standard cross-entropy loss function for the classification task. For binary classification, where $y \in \{0, 1\}$, the loss function can be expressed as:
 \begin{align}
-    \mathcal{L}(y, \hat{y}) = -\frac{1}{N} \sum_{i=1}^{N} \sum_{c=1}^{C} y_{i,c} \log(\hat{y}_{i,c})
-\end{align}
-where $N$ is the number of samples, $C$ is the number of classes, $y_{i,c}$ is the true label for sample $i$ and class $c$, and $\hat{y}_{i,c}$ is the predicted probability for sample $i$ and class $c$. For binary classification ($N=2$), the loss simplifies to:
-\begin{align}
-    \mathcal{L}(\theta) = -\frac{1}{N} \sum_{i=1}^{N} \left[ y_{i} \log(\hat{y}_{i}) + (1 - y_{i}) \log(1 - \hat{y}_{i}) \right]
+    \mathcal{L}(y, \hat{y}) &= - \left[y \log(\hat{y}) + (1-y) \log(1-\hat{y})\right]\\
+    &= 
+    \begin{cases}
+    -\log(\hat{y}), & \text{if } y = 1 \\
+    -\log(1-\hat{y}), & \text{if } y = 0
+    \end{cases}
 \end{align}
 
-We adopt similar regularization techniques as in \citet{guEmpiricalAssetPricing2020}. We use a Adaptive Moment Estimation With Weight Decay (AdamW) optimizer \citep{loshchilovDecoupledWeightDecay2019}, which is standard in the transformer training. We set the learning rate to $1\times 10^{-5}$ and set the weight decay to $1\times 10^{-2}$ (equivalent to L2 regularization). Besides, we use a dropout rate of $0.2$ to prevent overfitting. Dropout is a regularization technique that randomly sets a fraction of the input units to zero during training, which helps prevent overfitting by reducing the model's reliance on specific features. We use a standard "warm-up" and "cosine decay" learning rate scheduler, which gradually increases the learning rate from zero to the initial value over a specified number of warm-up steps, and then decays it using a cosine function. This approach helps stabilize training in the early stages and allows for better convergence.
+For multi-class classification, where $y \in \{1, 2, ..., K\}$, the loss function can be expressed as:
+\begin{align}
+    \mathcal{L}(y, \hat{y}) &= - \sum_{k=1}^{K} \mathbf{I}(y = k) \log(\hat{y}^k) \\
+    &= - \log(\hat{y}^k), \quad \text{if } y = k
+\end{align}
 
-We train each model using annually updated rolling window, given the time-varying universe of stocks in \ref{fig:num_stocks_vsurf}. Specifically, we use a 8-year in-sample period, with 6 years for training and 2 years for validation, to predict the out-of-sample returns for the subsequent year. The first training period starts from January 1996 to December 2003, and the trained model is then used to predict out-of-sample returns for the subsequent year 2004. The model is then updated with the data from 2004, and used to predict out-of-sample returns for 2005. This process continues until August 2023, the last month of our dataset. Overall, the out-of-sample prediction period is from January 2004 to August 2023, which contains around 20 years of results.
+In the case of imbalanced classes, we can use a weighted cross-entropy loss function to give more importance to the minority classes. The weighted loss function can be expressed as:
+\begin{align}
+    \mathcal{L}(y, \hat{y}) &= - \sum_{k=1}^{K} w_k \cdot \mathbf{I}(y = k) \log(\hat{y}^k) \\
+    &= - w_k \cdot \log(\hat{y}^k), \quad \text{if } y = k \\
+    w_k &= \frac{N}{K \cdot N_k}
+\end{align}
+where $w_k$ is the weight for class $k$, $N$ is the total number of samples, and $N_k$ is the number of samples in class $k$. This weighting scheme helps to balance the influence of each class during training, especially when some classes are underrepresented.
+
+We adopt similar regularization techniques as in \citet{guEmpiricalAssetPricing2020}, to prevent overfitting and improve the comuputational efficiency. We use a Adaptive Moment Estimation With Weight Decay (AdamW) optimizer \citep{loshchilovDecoupledWeightDecay2019}, which is standard in the transformer training and a refined version of the Adam optimizer \citep{kingmaAdamMethodStochastic2017}. AdamW decouples the weight decay (L2 regularization) from the gradient update, which has been shown to lead to better generalization performance. In this study, we set the learning rate to $1\times 10^{-5}$, the weight decay to $1\times 10^{-2}$ and the batch size to 512. We use a dropout rate of $0.2$ to prevent overfitting. Dropout is a regularization technique that randomly sets a fraction of the input units to zero during training, which helps prevent overfitting by reducing the model's reliance on specific features. We apply multiple methods for parameter initialization: for weights in the patch embedding layers and classfication head, we use the Xavier initialization \citep{glorotUnderstandingDifficultyTraining2010}, which is the best practice for deep neural networks such as CNNs; for parameters in the CLS token and positional embeddings, as well as the weights in the Transformer encoder, we use a truncated normal distribution with a standard deviation of $0.02$, following the BERT model \citet{devlinBERTPretrainingDeep2019}; for layer normalization parameters, we initialize the weights to 1; the biases in all layers are initialized to 0. We use a standard "warm-up" and "cosine decay" learning rate scheduler, which gradually increases the learning rate from zero to the initial value over a specified number of warm-up steps, and then decays it using a cosine function. This approach helps stabilize training in the early stages and allows for better convergence. Early stopping is also employed, where the training process is halted if the validation loss does not improve for a two consecutive epochs, to prevent overfitting and save computational resources.
+
+We train each model using annually updated rolling window, given the time-varying universe of stocks in \ref{fig:num_stocks_vsurf}. Specifically, we use a 8-year in-sample period, with 6 years for training and 2 years for validation, to predict the out-of-sample returns for the subsequent year. The first training period starts from January 1996 to December 2003, and the trained model is then used to predict out-of-sample returns for the subsequent year 2004. The model is then updated with the data from 2004, and used to predict out-of-sample returns for 2005. This process continues until August 2023, the last month of our dataset. Overall, the out-of-sample prediction period is from January 2004 to August 2023, which contains around 20 years of results. The daily dataset provides a large number of training samples, which is crucial for training such a large deep learning model, while we only collect the out-of-sample predictions at the end of each month for empirical analysis.
 
 \section{Empirical Results} \label{sec:result}
-\subsection{Directional Prediction of Stock Returns} \label{sec:binary}
+We begin with the simplest binary classification problem ($K = 2$). Following \citet{jiangReImaginingPriceTrends2023}, the stock returns are simply classified into "up" and "down" classes based on whether the future return is positive or negative. Besides the simplicity and interpretability, one remarkable benefit of such binary classification is that the two classes are naturally more balanced in our dataset, which is to say, there are approximately $50\%$ "up" labels and $50\%$ "down" labels. This is crucial for the training of such deep learning or machine learning models, since imbalanced classes can lead to suboptimal performance, as the model may become biased towards the majority class \citep{heLearningImbalancedData2009a}.
 
-\subsection{Crash Prediction} \label{sec:crash}
-
+We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days), which is most common in the literature of cross-section of stock returns studies. Table \ref{tab:portfolio_binary_full} reports the portfolio performance of equal-weight and value-weight decile portfolios formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$.
 
 \section{Conclusion} \label{sec:conclusion}
 
@@ -334,53 +361,65 @@ We train each model using annually updated rolling window, given the time-varyin
 \section*{Figures} \label{sec:fig}
 \addcontentsline{toc}{section}{Figures}
 
-\begin{figure}[hp]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=1\textwidth]{Figures/num_stocks_vsurf.png}
-    \caption{Number of Stocks with Option-Implied Volatility Surface Data (1996-2023). }
+    \caption{Number of Stocks with Option-Implied Volatility Surface Data (1996-2023). The figure shows the number of stocks with available option-implied volatility surface data from IvDB OptionMetrics, spanning from January 1996 to August 2023.}
     \label{fig:num_stocks_vsurf}
     
 \end{figure}
 
-\begin{figure}[hp]
+\clearpage
+\begin{figure}[htbp]
+    \vfill
     \centering
     \includegraphics[width=1\textwidth]{Figures/vsurf_3d_plot.png}
     \caption{Example of Interpolated Option-Implied Volatility Surface (AAPL, 01/08/2023). The plot shows the volatility surface for Apple Inc. (AAPL) on Aug 1st, 2023, with moneyness (option delta) on the x-axis, days to expiration on the y-axis, and implied volatility levels represented by the color gradient.}
     \label{fig:vsurf_3d_plot}
 \end{figure}
 
-\begin{figure}[hp]
+\clearpage
+\begin{figure}[htbp]
+    \vfill
     \centering
     \includegraphics[width=1\textwidth]{Figures/vsurf_heatmap.png}
     \caption{"Image" Representation of Volatility Surface (01/08/2023). The upper panel shows the heatmap of the volatility surface for Apple Inc. (AAPL), while the lower panel shows the volatility surface for the S$\&$P 500 index (SPX) on the same date. The x-axis represents moneyness (option delta), and the y-axis represents days to expiration, with color intensity indicating implied volatility levels.}
     \label{fig:vsurf_heatmap}
 \end{figure}
 
-\begin{figure}[hp]
- \centering
- \includegraphics[width=1\textwidth]{Figures/vit_figure.png}
- \caption{Vision Transformer (ViT) Architecture from \citet{dosovitskiyImageWorth16x162020}. The image is split into fixed-size patches, linearly embedded, and then position embeddings are added. The resulting sequence of vectors is fed to a standard Transformer encoder. Similar to BERT, a classification token is prepended to the sequence, and the final hidden state corresponding to this token is used for classification tasks.}
- \label{fig:vit_figure}
+\clearpage
+\begin{figure}[htbp]
+    \vfill
+    \centering
+    \includegraphics[width=1\textwidth]{Figures/vit_figure.png}
+    \caption{Vision Transformer (ViT) Architecture from \citet{dosovitskiyImageWorth16x162020}. The image is split into fixed-size patches, linearly embedded, and then position embeddings are added. The resulting sequence of vectors is fed to a standard Transformer encoder. Similar to BERT, a classification token is prepended to the sequence, and the final hidden state corresponding to this token is used for classification tasks.}
+    \label{fig:vit_figure}
 \end{figure}
 
-\begin{figure}[hp]
+\clearpage
+\begin{figure}[htbp]
+    \vfill
     \centering
     \includegraphics[width=1\textwidth]{Figures/channel_vit_figure.png}
-    \caption{Channel Vision Transformer (Channel ViT) Architecture from \citet{baoChannelVisionTransformers2024}.}
+    \caption{Channel Vision Transformer (ChannelViT) Architecture from \citet{baoChannelVisionTransformers2024}. The input image comprises multiple channels potentially carrying semantically distinct and independent information. ChannelViT constructs patch tokens for each individual channel, utilizing a learnable channel embedding \textbf{chn} to encode channel-specific information. The linear embedding \textbf{W} and positional embeddings \textbf{pos} are shared across all channels. The resulting sequence of vectors from all channels is concatenated and fed into a standard Transformer encoder. Similar to BERT, a classification token is prepended to the sequence, and the final hidden state corresponding to this token is used for classification tasks.}
     \label{fig:channel_vit_figure}
 \end{figure}
 
-\begin{figure}[hp]
+\clearpage
+\begin{figure}[htbp]
+    \vfill
     \centering
     \includegraphics[width=1\textwidth]{Figures/cumlogret_binary_full.png}
-    \caption{Cumulative Log Return}
+    \caption{Cumulative Log Return, All Stocks. This figure shows the cumulative log return of equal-weight portfolios formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$ from January 2004 to August 2023. The sample includes all stocks with available option-implied volatility surface data. The "Low" series represents the decile portfolio of stocks with the lowest predicted "up" probabilities, while the "High" series represents the decile portfolio with the highest predicted "up" probabilities. The "High - Low" series represents a long position in the "High" portfolio and a short position in the "Low" portfolio.}
     \label{fig:cumlogret_binary_full}
 \end{figure}
 
-\begin{figure}[hp]
+\clearpage
+\begin{figure}[htbp]
+    \vfill
     \centering
     \includegraphics[width=1\textwidth]{Figures/cumlogret_binary_sp.png}
-    \caption{Cumulative Log Return, S\&P 500 Stocks}
+    \caption{Cumulative Log Return, S\&P 500 Stocks. This figure shows the cumulative log return of equal-weight decile portfolios formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$ from January 2004 to August 2023. The sample includes only stocks that are part of the S\&P 500 index. The "Low" series represents the 1/3 stocks with the lowest predicted "up" probabilities, while the "High" series represents the 2/3 stocks with the highest predicted "up" probabilities. The "SPY" series represents the cumulative log return of the S\&P 500 index ETF (SPY) over the same period.}
     \label{fig:cumlogret_binary_sp}
 \end{figure}
 
