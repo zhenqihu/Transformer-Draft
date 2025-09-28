@@ -1,5 +1,5 @@
 \documentclass[12pt]{article}
-\usepackage{amssymb,amsmath,amsfonts,eurosym,geometry,ulem,graphicx,caption,color,setspace,sectsty,comment,natbib,footmisc,pdflscape,subfigure,array,hyperref,booktabs,hypcap,siunitx,threeparttable,rotating}
+\usepackage{amssymb,amsmath,amsfonts,eurosym,geometry,ulem,graphicx,caption,color,setspace,sectsty,comment,natbib,footmisc,pdflscape,subfigure,array,hyperref,booktabs,hypcap,siunitx,threeparttable,rotating,longtable,booktabs}
 
 
 \normalem
@@ -55,6 +55,7 @@
 \section{Literature Review} \label{sec:literature}
 
 \section{Data} \label{sec:data}
+\subsection{Option-Implied Volatility Surface (IVS)} \label{sec:ivs}
 We obtain the equity and index option data from the IvyDB OptionMetrics database, which provides Volatility Surface files (vsurfdYYYY) that contain the interpolated Black-Scholes implied volatilities, starting from January 1996. For each security on each day, a volatility surface with standard maturities of $\tau$ days to expiration and moneyness levels measured by option $\delta$ is provided. \footnote{OptionMetrics use a methodology based on a kernel smoothing algorithm to interpolate the volatility surface. The maturities are 10, 30, 60, 91, 122, 152, 182, 365, 547, 730 days to expiration, and the option delta levels are from 0.1 to 0.9 with a step of 0.05, positive for call options and negative for put options.}
 
 We select out-of-the-money (OTM) and near at-the-money (ATM) put options with delta levels in [-0.5, -0.1], as well as OTM and near ATM call options with delta levels in [0.1, 0.5], since the deep-in-the-money call options are often illiquid, following \citet{martinWhatExpectedReturn2017}, among others. The options are rearranged by their moneyness (implied strike), so the delta levels start from -0.1 to -0.5, then from 0.5 to 0.1 \footnote{The implied strike order between put option with delta -0.5 and call option with delta 0.5 is uncertain, but their spread is proved to have predictive power for future returns \citep{yanJumpRiskStock2011}, so we keep both of them.}. We also drop the options with maturities equal to 10 days, since the large fraction of missing values. The final volatility surface data contains 10 maturities and 18 delta levels, and a example of the volatility surface is shown in Figure \ref{fig:vsurf_3d_plot}. The input features, in result, can be represented as $IV_{i, t} = \{IV_{i,t}(\tau, \delta)\}_{\tau \in T, \delta \in \Delta}$. the volatility surface of security $i$ at time $t$.
@@ -66,6 +67,10 @@ We obtain the daily return data from CRSP for all firms listed on NYSE, AMEX, an
 \end{align}
 
 We link the volatility surface data from OptionMetrics with the return data from CRSP using a linking table provided by WRDS. The final dataset spans from January 1996 to August 2023, and Figure \ref{fig:num_stocks_vsurf} shows the coverage of the stocks with available volatility surface data over time. The number of stocks with available volatility surface data increases significantly over time, from below 1000 to over 5000 in recent years.
+
+\subsection{Option Characteristics} \label{sec:opt_char}
+Motivated by the extensive literature from cross-section studies of stock returns, we also collect a set of option-related characteristics that have been shown to have predictive power for future stock returns. \citet{neuhierlOptionCharacteristicsCrosssectional2022} summarized a comprehensive list of option characteristics and compared their performance. We follow their results and select the strongest predictors, which are described in the Appendix \ref{sec:appendixb}.
+
 
 \section{The Vision Transformer Model} \label{sec:model}
 In this section, we briefly introduce the vision transformer (ViT) model architecture and our experimental design.
@@ -172,36 +177,32 @@ For multi-class classification ($K > 2$), the stock returns can be discretized i
 \subsection{Training Process} \label{sec:training}
 We use standard cross-entropy loss function for the classification task. For binary classification, where $y \in \{0, 1\}$, the loss function can be expressed as:
 \begin{align}
-    \mathcal{L}(y, \hat{y}) &= - \left[y \log(\hat{y}) + (1-y) \log(1-\hat{y})\right]\\
-    &= 
-    \begin{cases}
-    -\log(\hat{y}), & \text{if } y = 1 \\
-    -\log(1-\hat{y}), & \text{if } y = 0
-    \end{cases}
+    \mathcal{L}(y, \hat{y}) &= - \left[y \log(\hat{y}) + (1-y) \log(1-\hat{y})\right]
 \end{align}
 
 For multi-class classification, where $y \in \{1, 2, ..., K\}$, the loss function can be expressed as:
 \begin{align}
-    \mathcal{L}(y, \hat{y}) &= - \sum_{k=1}^{K} \mathbf{I}(y = k) \log(\hat{y}^k) \\
-    &= - \log(\hat{y}^k), \quad \text{if } y = k
+    \mathcal{L}(y, \hat{y}) &= - \sum_{k=1}^{K} \mathbf{I}(y = k) \log(\hat{y}^k)
 \end{align}
+where $\hat{y}^k$ is the predicted probability of class $k$.
 
 In the case of imbalanced classes, we can use a weighted cross-entropy loss function to give more importance to the minority classes. The weighted loss function can be expressed as:
 \begin{align}
     \mathcal{L}(y, \hat{y}) &= - \sum_{k=1}^{K} w_k \cdot \mathbf{I}(y = k) \log(\hat{y}^k) \\
-    &= - w_k \cdot \log(\hat{y}^k), \quad \text{if } y = k \\
     w_k &= \frac{N}{K \cdot N_k}
 \end{align}
 where $w_k$ is the weight for class $k$, $N$ is the total number of samples, and $N_k$ is the number of samples in class $k$. This weighting scheme helps to balance the influence of each class during training, especially when some classes are underrepresented.
 
-We adopt similar regularization techniques as in \citet{guEmpiricalAssetPricing2020}, to prevent overfitting and improve the comuputational efficiency. We use a Adaptive Moment Estimation With Weight Decay (AdamW) optimizer \citep{loshchilovDecoupledWeightDecay2019}, which is standard in the transformer training and a refined version of the Adam optimizer \citep{kingmaAdamMethodStochastic2017}. AdamW decouples the weight decay (L2 regularization) from the gradient update, which has been shown to lead to better generalization performance. In this study, we set the learning rate to $1\times 10^{-5}$, the weight decay to $1\times 10^{-2}$ and the batch size to 512. We use a dropout rate of $0.2$ to prevent overfitting. Dropout is a regularization technique that randomly sets a fraction of the input units to zero during training, which helps prevent overfitting by reducing the model's reliance on specific features. We apply multiple methods for parameter initialization: for weights in the patch embedding layers and classfication head, we use the Xavier initialization \citep{glorotUnderstandingDifficultyTraining2010}, which is the best practice for deep neural networks such as CNNs; for parameters in the CLS token and positional embeddings, as well as the weights in the Transformer encoder, we use a truncated normal distribution with a standard deviation of $0.02$, following the BERT model \citet{devlinBERTPretrainingDeep2019}; for layer normalization parameters, we initialize the weights to 1; the biases in all layers are initialized to 0. We use a standard "warm-up" and "cosine decay" learning rate scheduler, which gradually increases the learning rate from zero to the initial value over a specified number of warm-up steps, and then decays it using a cosine function. This approach helps stabilize training in the early stages and allows for better convergence. Early stopping is also employed, where the training process is halted if the validation loss does not improve for a two consecutive epochs, to prevent overfitting and save computational resources.
+We adopt similar regularization techniques as in \citet{guEmpiricalAssetPricing2020}, to prevent overfitting and improve the comuputational efficiency. We use a Adaptive Moment Estimation With Weight Decay (AdamW) optimizer \citep{loshchilovDecoupledWeightDecay2019}, which is standard in the transformer training and a refined version of the Adam optimizer \citep{kingmaAdamMethodStochastic2017}. AdamW decouples the weight decay (L2 regularization) from the gradient update, which has been shown to lead to better generalization performance. In this study, we set the learning rate to $1\times 10^{-5}$, the weight decay to $1\times 10^{-2}$ and the batch size to 512. We use a dropout rate of $0.2$ to prevent overfitting. Dropout is a regularization technique that randomly sets a fraction of the input units to zero during training, which helps prevent overfitting by reducing the model's reliance on specific features. 
 
-We train each model using annually updated rolling window, given the time-varying universe of stocks in \ref{fig:num_stocks_vsurf}. Specifically, we use a 8-year in-sample period, with 6 years for training and 2 years for validation, to predict the out-of-sample returns for the subsequent year. The first training period starts from January 1996 to December 2003, and the trained model is then used to predict out-of-sample returns for the subsequent year 2004. The model is then updated with the data from 2004, and used to predict out-of-sample returns for 2005. This process continues until August 2023, the last month of our dataset. Overall, the out-of-sample prediction period is from January 2004 to August 2023, which contains around 20 years of results. The daily dataset provides a large number of training samples, which is crucial for training such a large deep learning model, while we only collect the out-of-sample predictions at the end of each month for empirical analysis.
+We apply multiple methods for parameter initialization: for weights in the patch embedding layers and classfication head, we use the Xavier initialization \citep{glorotUnderstandingDifficultyTraining2010}, which is the best practice for deep neural networks such as CNNs; for parameters in the CLS token and positional embeddings, as well as the weights in the Transformer encoder, we use a truncated normal distribution with a standard deviation of $0.02$, following the BERT model \citet{devlinBERTPretrainingDeep2019}; for layer normalization parameters, we initialize the weights to 1; the biases in all layers are initialized to 0. We use a standard "warm-up" and "cosine decay" learning rate scheduler, which gradually increases the learning rate from zero to the initial value over a specified number of warm-up steps, and then decays it using a cosine function. This approach helps stabilize training in the early stages and allows for better convergence. Early stopping is also employed, where the training process is halted if the validation loss does not improve for a two consecutive epochs, to prevent overfitting and save computational resources.
+
+We train each model using annually updated rolling window, given the time-varying universe of stocks in \ref{fig:num_stocks_vsurf}. Specifically, we use a 8-year in-sample period, with 6 years for training and 2 years for validation, to predict the out-of-sample returns for the subsequent year. The first training period starts from January 1996 to December 2003, and the trained model is then used to predict out-of-sample returns for the subsequent year 2004. The model is then updated with the data from 2004, and used to predict out-of-sample returns for 2005. This process continues until August 2023, the last month of our dataset. Overall, the out-of-sample prediction period is from January 2004 to August 2023, which contains around 20 years of results. The daily dataset provides a large number of training samples, which is crucial for training such a large deep learning model, while we only collect the out-of-sample predictions at the end of each month for empirical analysis. Since the stochastic nature of the Vision Transformer model, we train each specific model for five times and calculate the average predictions, following \citet{guEmpiricalAssetPricing2020}.
 
 \section{Empirical Results} \label{sec:result}
 We begin with the simplest binary classification problem ($K = 2$). Following \citet{jiangReImaginingPriceTrends2023}, the stock returns are simply classified into "up" and "down" classes based on whether the future return is positive or negative. Besides the simplicity and interpretability, one remarkable benefit of such binary classification is that the two classes are naturally more balanced in our dataset, which is to say, there are approximately $50\%$ "up" labels and $50\%$ "down" labels. This is crucial for the training of such deep learning or machine learning models, since imbalanced classes can lead to suboptimal performance, as the model may become biased towards the majority class \citep{heLearningImbalancedData2009a}.
 
-We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days), which is most common in the literature of cross-section of stock returns studies. Table \ref{tab:portfolio_binary_full} reports the portfolio performance of equal-weight and value-weight decile portfolios formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$.
+We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days), which is common in the literature of cross-section of stock returns studies. Table \ref{tab:portfolio_binary_full} reports the portfolio performance of equal-weight and value-weight decile portfolios, including a long-short spread portfolio "H-L", formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$ in each month's end, with a holding period of one month. The table 
 
 \section{Conclusion} \label{sec:conclusion}
 
@@ -427,13 +428,31 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 
 
 \clearpage
+\appendix
+\renewcommand{\thetable}{\thesection.\arabic{table}}
+\renewcommand{\thefigure}{\thesection.\arabic{figure}}
+\setcounter{table}{0}
+\setcounter{figure}{0}
+\section{Vision Transformer Model Structure} \label{sec:appendixa}
+%\addcontentsline{toc}{section}{Appendix A}
 
-\section*{Appendix A. Placeholder} \label{sec:appendixa}
-\addcontentsline{toc}{section}{Appendix A}
+\section{Option-Based and Other Characteristics} \label{sec:appendixb}
+%\addcontentsline{toc}{section}{Appendix B}
+This section provides additional details on the option-based characteristics used in the empirical tests. We select a set of most significant characteristics from \citet{neuhierlOptionCharacteristicsCrosssectional2022}. Most of these variables are calculated from the standardized option-implied volatility surface data (vsurfdYYYY), while the option volume are from the trading volume data (opvoldYYYY). Monthly sample period is from January 1996 to August 2023, same as the date range of OptionMetrics data.
+\begin{itemize}
+    \item $\textbf{CIV}$ \& $\textbf{PIV}$: Near At-The-Money (ATM) call and put implied volatility with maturity of 30 days and absolute delta of 0.5, following \citet{anJointCrossSection2014}
+    \item $\Delta \textbf{CIV}$ \& $\Delta \textbf{PIV}$: Monthly change in the near ATM call and put implied volatility, also from \citet{anJointCrossSection2014}
+    \item \textbf{log(O/S)}: Total monthly option volume over all call and put options, divided by monthly stock trading volume, following \citet{johnsonOptionStockVolume2012}.
+    \item $\textbf{IVS}_{ATM}$: Difference between the near ATM put (delta = -0.5 and maturity = 30 days) and call (delta = 0.5 and maturity = 30 days) implied volatility, using the last daily observation of each month, following \citet{yanJumpRiskStock2011}.
+    \item $\textbf{IVS}_{OTM}$: Difference between the Out-The-Money (OTM) put implied volatility with moneyness closest to but above 1, and the OTM call implied volatility with moneyness closest to but below 1, using options with expiration between 10 and 60 days, following \citet{xingWhatDoesIndividual2010}.
+\end{itemize}
 
-\section*{Appendix B. Additional Results} \label{sec:appendixb}
-\addcontentsline{toc}{section}{Appendix B}
+Thanks to the work of \citet{CFR-0112}, we are able to directly download most of these option characteristics from their website \footnote{\url{https://www.openassetpricing.com/}}. The methodology that they used closely followed the original papers with only minor modifications. It is worth noting that we use the same name conventions as in \citet{neuhierlOptionCharacteristicsCrosssectional2022}, while the construction of these variables might be slightly different from them.
 
+Besides these option-based characteristics, we also include the following commonly used stock characteristics as control variables in the empirical tests: CAPM beta (beta), logarithm of market capitalization (log(ME)), past 1-month return ($ret_{1, 0}$), past 12-month return excluding the most recent month ($ret_{12, 2}$). These stock characteristics are also downloaded from \citet{CFR-0112}, except for the CAPM beta, which is downloaded from the Beta Suite by WRDS\footnote{\url{https://wrds-www.wharton.upenn.edu/pages/get-data/beta-suite-wrds/}}, calculated using daily returns over a 252-trading-day estimation window and a 126-trading-day minimum requirement.
+
+\section{Additional Results} \label{sec:appendixc}
+%\addcontentsline{toc}{section}{Appendix C}
 \begin{table}[htbp]
 \centering
 \small
