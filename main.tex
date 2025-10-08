@@ -424,6 +424,14 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
     \label{fig:cumlogret_binary_sp}
 \end{figure}
 
+\clearpage
+\begin{figure}[htbp]
+    \vfill
+    \centering
+    \includegraphics[width=1\textwidth]{Figures/kmeans_2D_100.png}
+    \caption{Classification Visualization (K-Means Clustering)}
+    \label{fig:kmeans_2D_100}
+\end{figure}
 
 
 
@@ -440,9 +448,10 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 %\addcontentsline{toc}{section}{Appendix B}
 This section provides additional details on the option-based characteristics used in the empirical tests. We select a set of most significant characteristics from \citet{neuhierlOptionCharacteristicsCrosssectional2022}. Most of these variables are calculated from the standardized option-implied volatility surface data (vsurfdYYYY), while the option volume are from the trading volume data (opvoldYYYY). Monthly sample period is from January 1996 to August 2023, same as the date range of OptionMetrics data.
 \begin{itemize}
-    \item $\textbf{CIV}$ \& $\textbf{PIV}$: Near At-The-Money (ATM) call and put implied volatility with maturity of 30 days and absolute delta of 0.5, following \citet{anJointCrossSection2014}
-    \item $\Delta \textbf{CIV}$ \& $\Delta \textbf{PIV}$: Monthly change in the near ATM call and put implied volatility, also from \citet{anJointCrossSection2014}
-    \item \textbf{log(O/S)}: Total monthly option volume over all call and put options, divided by monthly stock trading volume, following \citet{johnsonOptionStockVolume2012}.
+    \item $\textbf{CIV}$ \& $\textbf{PIV}$: Near At-The-Money (ATM) call and put implied volatility with maturity of 30 days and absolute delta of 0.5, following \citet{anJointCrossSection2014a}
+    \item $\Delta \textbf{CIV}$ \& $\Delta \textbf{PIV}$: Monthly change in the near ATM call and put implied volatility, also from \citet{anJointCrossSection2014a}
+    \item \textbf{SKEW}: Difference between average put and call IV, using options with 30 days to expiration and average across call with delta between 0.2 to 0.4, and put with delta between -0.2 to -0.4, following \citet{neuhierlOptionCharacteristicsCrosssectional2022}.
+    \item \textbf{log(O/S)}: Total monthly option volume over all call and put options, divided by monthly stock trading volume, following \citet{johnsonOptionStockVolume2012a}.
     \item $\textbf{IVS}_{ATM}$: Difference between the near ATM put (delta = -0.5 and maturity = 30 days) and call (delta = 0.5 and maturity = 30 days) implied volatility, using the last daily observation of each month, following \citet{yanJumpRiskStock2011}.
     \item $\textbf{IVS}_{OTM}$: Difference between the Out-The-Money (OTM) put implied volatility with moneyness closest to but above 1, and the OTM call implied volatility with moneyness closest to but below 1, using options with expiration between 10 and 60 days, following \citet{xingWhatDoesIndividual2010}.
 \end{itemize}
