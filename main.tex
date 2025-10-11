@@ -247,9 +247,26 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 \end{table}
 
 
-\begin{sidewaystable}[htbp]
+% \begin{sidewaystable}[htbp]
+% \centering
+% \setlength{\tabcolsep}{4pt}
+% \small
+% \sisetup{
+%     table-align-text-post=false,
+%     input-symbols = {(),-},
+%     table-space-text-pre = {(},
+%     table-space-text-post = {)} 
+% }
+% \caption{Correlation Analysis, Binary Classification Model, All Stocks}
+% \input{Tables/corr_binary.tex}
+% \label{tab:corr_binary}
+% \end{sidewaystable}
+
+
+\clearpage
+\begin{table}[htbp]
 \centering
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{6pt}
 \small
 \sisetup{
     table-align-text-post=false,
@@ -257,10 +274,12 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
     table-space-text-pre = {(},
     table-space-text-post = {)} 
 }
-\caption{Correlation Analysis, Binary Classification Model, All Stocks}
-\input{Tables/corr_binary.tex}
-\label{tab:corr_binary}
-\end{sidewaystable}
+\caption{Correlation Analysis}
+\label{tab:corr_binary_models}
+\begin{threeparttable}
+\input{Tables/corr_binary_models.tex}
+\end{threeparttable}
+\end{table}
 
 
 \begin{table}[htbp]
@@ -277,7 +296,6 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 \label{tab:port_char_binary}
 \begin{threeparttable}
 \input{Tables/port_char_binary.tex}
-
 \end{threeparttable}
 \end{table}
 
@@ -352,7 +370,24 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 \end{threeparttable}
 \end{table}
 
+\clearpage
 
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{6pt}
+\small
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Summary Statistics of K-Means Clustering, 100 Clusters}
+\label{tab:kmeans100_summary_stats}
+\begin{threeparttable}
+\input{Tables/kmeans100_summary_stats.tex}
+\end{threeparttable}
+\end{table}
 
 \clearpage
 
@@ -410,10 +445,19 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 \begin{figure}[htbp]
     \vfill
     \centering
-    \includegraphics[width=1\textwidth]{Figures/cumlogret_binary_full.png}
-    \caption{Cumulative Log Return, All Stocks. This figure shows the cumulative log return of equal-weight portfolios formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$ from January 2004 to August 2023. The sample includes all stocks with available option-implied volatility surface data. The "Low" series represents the decile portfolio of stocks with the lowest predicted "up" probabilities, while the "High" series represents the decile portfolio with the highest predicted "up" probabilities. The "High - Low" series represents a long position in the "High" portfolio and a short position in the "Low" portfolio.}
-    \label{fig:cumlogret_binary_full}
+    \includegraphics[width=1\textwidth]{Figures/port_performace.png}
+    \caption{Portfolio Performance from Different Models.}
+    \label{fig:port_performace}
 \end{figure}
+
+% \clearpage
+% \begin{figure}[htbp]
+%     \vfill
+%     \centering
+%     \includegraphics[width=1\textwidth]{Figures/cumlogret_binary_full.png}
+%     \caption{Cumulative Log Return, All Stocks. This figure shows the cumulative log return of equal-weight portfolios formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$ from January 2004 to August 2023. The sample includes all stocks with available option-implied volatility surface data. The "Low" series represents the decile portfolio of stocks with the lowest predicted "up" probabilities, while the "High" series represents the decile portfolio with the highest predicted "up" probabilities. The "High - Low" series represents a long position in the "High" portfolio and a short position in the "Low" portfolio.}
+%     \label{fig:cumlogret_binary_full}
+% \end{figure}
 
 \clearpage
 \begin{figure}[htbp]
