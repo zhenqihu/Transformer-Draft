@@ -389,7 +389,45 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 \end{threeparttable}
 \end{table}
 
+
 \clearpage
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{4pt}
+\small
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Portfolio Returns, K-Means Clustering, $E(R_s)$}
+\label{tab:portfolio_kmeans_mu_s}
+\begin{threeparttable}
+\input{Tables/portfolio_kmeans_mu_s.tex}
+\end{threeparttable}
+\end{table}
+
+\clearpage
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{6pt}
+\small
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Cross-Sectional Regression, K-Means Clustering, 100 Clusters}
+\label{tab:cs_reg_beta}
+\begin{threeparttable}
+\input{Tables/cs_reg_beta.tex}
+\end{threeparttable}
+\end{table}
+
+\clearpage
+
 
 
 % ------------------------------- Figures ------------------------------- %
@@ -445,9 +483,9 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 \begin{figure}[htbp]
     \vfill
     \centering
-    \includegraphics[width=1\textwidth]{Figures/port_performace.png}
+    \includegraphics[width=1\textwidth]{Figures/port_binary_full.png}
     \caption{Portfolio Performance from Different Models.}
-    \label{fig:port_performace}
+    \label{fig:port_binary_full}
 \end{figure}
 
 % \clearpage
@@ -463,8 +501,8 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 \begin{figure}[htbp]
     \vfill
     \centering
-    \includegraphics[width=1\textwidth]{Figures/cumlogret_binary_sp.png}
-    \caption{Cumulative Log Return, S\&P 500 Stocks. This figure shows the cumulative log return of equal-weight decile portfolios formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$ from January 2004 to August 2023. The sample includes only stocks that are part of the S\&P 500 index. The "Low" series represents the 1/3 stocks with the lowest predicted "up" probabilities, while the "High" series represents the 2/3 stocks with the highest predicted "up" probabilities. The "SPY" series represents the cumulative log return of the S\&P 500 index ETF (SPY) over the same period.}
+    \includegraphics[width=1\textwidth]{Figures/cumret_binary_sp.png}
+    \caption{Cumulative Returns, S\&P 500 Stocks. This figure shows the cumulative log return of equal-weight decile portfolios formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$ from January 2004 to August 2023. The sample includes only stocks that are part of the S\&P 500 index. The "Low" series represents the 1/3 stocks with the lowest predicted "up" probabilities, while the "High" series represents the 2/3 stocks with the highest predicted "up" probabilities. The "SPY" series represents the cumulative log return of the S\&P 500 index ETF (SPY) over the same period.}
     \label{fig:cumlogret_binary_sp}
 \end{figure}
 
@@ -475,6 +513,24 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
     \includegraphics[width=1\textwidth]{Figures/kmeans_2D_100.png}
     \caption{Classification Visualization (K-Means Clustering)}
     \label{fig:kmeans_2D_100}
+\end{figure}
+
+\clearpage
+\begin{figure}[htbp]
+    \vfill
+    \centering
+    \includegraphics[width=1\textwidth]{Figures/port_kmeans.png}
+    \caption{Portfolio Performance from K-Means Clustering (100 Clusters)}
+    \label{fig:port_kmeans_mu_s}
+\end{figure}
+
+\clearpage
+\begin{figure}[htbp]
+    \vfill
+    \centering
+    \includegraphics[width=1\textwidth]{Figures/cumret_kmeans_sp.png}
+    \caption{Cumulative Returns, S\&P 500 Stocks (K-Means Clustering, 100 Clusters)}
+    \label{fig:cumret_kmeans_sp}
 \end{figure}
 
 
@@ -596,6 +652,8 @@ Besides these option-based characteristics, we also include the following common
 % \input{Tables/fm_reg_binary_nm.tex}
 % \end{threeparttable}
 % \end{table}
+
+
 
 
 \end{document}
