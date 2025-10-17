@@ -234,19 +234,19 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
     input-open-uncertainty = {(},
     input-close-uncertainty = {)}
 }
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3pt}
 \caption{Portfolio Analysis, Binary Classification Model, All Stocks}
 \label{tab:portfolio_binary_full}
 \begin{threeparttable}
-\input{Tables/portfolio_binary_full.tex}
-% \begin{tablenotes}
-%     \footnotesize
-%     \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
-% \end{tablenotes}
+\input{Tables/portfolio_binary_models.tex}
+\begin{tablenotes}
+    \footnotesize
+    \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
+\end{tablenotes}
 \end{threeparttable}
 \end{table}
 
-
+% \clearpage
 % \begin{sidewaystable}[htbp]
 % \centering
 % \setlength{\tabcolsep}{4pt}
@@ -301,7 +301,7 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 
 \begin{table}[htbp]
 \centering
-\setlength{\tabcolsep}{2pt}
+\setlength{\tabcolsep}{6pt}
 \small
 \sisetup{
     table-align-text-post=false,
@@ -310,16 +310,33 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
     table-space-text-post = {)}
 }
 \caption{Time Series Regression, Binary Classification Model, All Stocks}
-\label{tab:ts_reg_binary_full}
+\label{tab:ts_reg_binary_models}
 \begin{threeparttable}
-\input{Tables/ts_reg_binary_full.tex}
+\input{Tables/ts_reg_binary_models.tex}
 \end{threeparttable}
 \end{table}
+
+% \begin{table}[htbp]
+% \centering
+% \setlength{\tabcolsep}{2pt}
+% \small
+% \sisetup{
+%     table-align-text-post=false,
+%     input-symbols = {(),-},
+%     table-space-text-pre = {(},
+%     table-space-text-post = {)}
+% }
+% \caption{Time Series Regression, Binary Classification Model, All Stocks}
+% \label{tab:ts_reg_binary_models_alt}
+% \begin{threeparttable}
+% \input{Tables/ts_reg_binary_models_alt.tex}
+% \end{threeparttable}
+% \end{table}
 
 
 \begin{table}[htbp]
 \centering
-\setlength{\tabcolsep}{6pt}
+\setlength{\tabcolsep}{3pt}
 \small
 \sisetup{
     table-align-text-post=false,
@@ -330,7 +347,7 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 \caption{Fama-MacBeth Regression, Binary Classification Model, All Stocks}
 \label{tab:fm_reg_binary_full}
 \begin{threeparttable}
-\input{Tables/fm_reg_binary_full.tex}
+\input{Tables/fm_reg_binary_models.tex}
 \end{threeparttable}
 \end{table}
 
@@ -393,7 +410,7 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
 \clearpage
 \begin{table}[htbp]
 \centering
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{2pt}
 \small
 \sisetup{
     table-align-text-post=false,
@@ -401,10 +418,14 @@ We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days),
     table-space-text-pre = {(},
     table-space-text-post = {)} 
 }
-\caption{Portfolio Returns, K-Means Clustering, $E(R_s)$}
+\caption{Portfolio Returns, K-Means Clustering}
 \label{tab:portfolio_kmeans_mu_s}
 \begin{threeparttable}
-\input{Tables/portfolio_kmeans_mu_s.tex}
+\input{Tables/portfolio_kmeans.tex}
+\begin{tablenotes}
+    \footnotesize
+    \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
+\end{tablenotes}
 \end{threeparttable}
 \end{table}
 
@@ -575,31 +596,31 @@ Besides these option-based characteristics, we also include the following common
 \caption{Portfolio Analysis, Binary Classification Model, Non-Micro Stocks}
 \label{tab:portfolio_binary_nm}
 \begin{threeparttable}
-\input{Tables/portfolio_binary_nm.tex}
-% \begin{tablenotes}
-%     \footnotesize
-%     \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
-% \end{tablenotes}
+\input{Tables/portfolio_binary_models_nm.tex}
+\begin{tablenotes}
+    \footnotesize
+    \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
+\end{tablenotes}
 \end{threeparttable}
 \end{table}
 
 
-\begin{table}[htbp]
-\centering
-\small
-\setlength{\tabcolsep}{4pt}
-\sisetup{
-    table-align-text-post=false,
-    input-symbols = {(),-},
-    table-space-text-pre = {(},
-    table-space-text-post = {)} 
-}
-\caption{Portfolio Analysis, Binary Classification Model, S\&P 500 Stocks}
-\label{tab:portfolio_binary_micro}
-\begin{threeparttable}
-\input{Tables/portfolio_binary_sp.tex}
-\end{threeparttable}
-\end{table}
+% \begin{table}[htbp]
+% \centering
+% \small
+% \setlength{\tabcolsep}{4pt}
+% \sisetup{
+%     table-align-text-post=false,
+%     input-symbols = {(),-},
+%     table-space-text-pre = {(},
+%     table-space-text-post = {)} 
+% }
+% \caption{Portfolio Analysis, Binary Classification Model, S\&P 500 Stocks}
+% \label{tab:portfolio_binary_micro}
+% \begin{threeparttable}
+% \input{Tables/portfolio_binary_sp.tex}
+% \end{threeparttable}
+% \end{table}
 
 
 \begin{table}[htbp]
@@ -615,43 +636,43 @@ Besides these option-based characteristics, we also include the following common
 \caption{Time Series Regression, Binary Classification Model, Non-Micro Stocks}
 \label{tab:ts_reg_binary_nm}
 \begin{threeparttable}
-\resizebox{\textwidth}{!}{\input{Tables/ts_reg_binary_nm.tex}}
-\end{threeparttable}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\small
-\setlength{\tabcolsep}{4pt}
-\sisetup{
-    table-align-text-post=false,
-    input-symbols = {(),-},
-    table-space-text-pre = {(},
-    table-space-text-post = {)} 
-}
-\caption{Time Series Regression, Binary Classification Model, S\&P 500 Stocks}
-\label{tab:ts_reg_binary_large}
-\begin{threeparttable}
-\resizebox{\textwidth}{!}{\input{Tables/ts_reg_binary_sp.tex}}
+\resizebox{\textwidth}{!}{\input{Tables/ts_reg_binary_models_nm.tex}}
 \end{threeparttable}
 \end{table}
 
 % \begin{table}[htbp]
 % \centering
 % \small
-% \setlength{\tabcolsep}{6pt}
+% \setlength{\tabcolsep}{4pt}
 % \sisetup{
 %     table-align-text-post=false,
 %     input-symbols = {(),-},
 %     table-space-text-pre = {(},
 %     table-space-text-post = {)} 
 % }
-% \caption{Fama-MacBeth Regression, Binary Classification Model, Non-Micro Stocks}
-% \label{tab:fm_reg_binary_nm}
+% \caption{Time Series Regression, Binary Classification Model, S\&P 500 Stocks}
+% \label{tab:ts_reg_binary_large}
 % \begin{threeparttable}
-% \input{Tables/fm_reg_binary_nm.tex}
+% \resizebox{\textwidth}{!}{\input{Tables/ts_reg_binary_sp.tex}}
 % \end{threeparttable}
 % \end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Fama-MacBeth Regression, Binary Classification Model, Non-Micro Stocks}
+\label{tab:fm_reg_binary_nm}
+\begin{threeparttable}
+\input{Tables/fm_reg_binary_models_nm.tex}
+\end{threeparttable}
+\end{table}
 
 
 
