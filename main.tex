@@ -57,8 +57,8 @@
 
 
 \section{Introduction} \label{sec:introduction}
+The information contained in options market has been widely studied, along with 
 
-\section{Literature Review} \label{sec:literature}
 
 \section{Data} \label{sec:data}
 \subsection{Option-Implied Volatility Surface (IVS)} \label{sec:ivs}
@@ -80,11 +80,11 @@ We obtain the daily return data from CRSP for all firms listed on NYSE, AMEX, an
 We link the volatility surface data from OptionMetrics with the return data from CRSP using a linking table provided by WRDS. The final dataset spans from January 1996 to August 2023, and Figure \ref{fig:num_stocks_vsurf} shows the coverage of the stocks with available volatility surface and return data over time. The number of stocks increases significantly over time, from below 1000 to over 5000 in recent years.
 
 \subsection{Option-Based and Other Characteristics} \label{sec:char}
-Motivated by the extensive literature from cross-section studies of stock returns, we also collect a set of option-related predictors that have been shown to have predictive power for future stock returns. \citet{neuhierlOptionCharacteristicsCrosssectional2022} and \citet{muravyevWhyDoesOptions2025} summarized a comprehensive list of such option characteristics and compared their performance. We follow their results and select the strongest ones. Other common fundamental characteristics are also collected. A detailed description of these characteristics is provided in Appendix \ref{sec:appendixb}.
+Motivated by the extensive literature from cross-section studies of stock returns, we also collect a set of option-based predictors that have been shown to have predictive power for future stock returns. \citet{neuhierlOptionCharacteristicsCrosssectional2022} and \citet{muravyevWhyDoesOptions2025} summarized a comprehensive list of such option characteristics and compared their performance. We follow their results and select the strongest ones. Other common stock characteristics are also collected. A detailed description of these characteristics is provided in Appendix \ref{sec:appendixb}.
 
 
 \section{The Transformer Model} \label{sec:model}
-In this section, we briefly introduce the Transformer model architecture and our experimental design.
+In this section, we briefly introduce the vanilla Transformer model and Vision Transformer (ViT) model architectures and our experimental designs.
 
 \subsection{Brief Introduction of the Transformer Encoder and Vision Transformer} \label{sec:transformer}
 First introduced by \citet{vaswaniAttentionAllYou2017}, "Attention Is All You Need," the Transformer model has become a foundational architecture in deep learning, particularly for natural language processing (NLP). Unlike its predecessors, such as Recurrent Neural Networks (RNNs) and Long Short-Term Memory (LSTM) networks, the Transformer does not rely on sequential data processing. Instead, it processes the entire input sequence at once, using a sophisticated mechanism known as self-attention to weigh the importance of different words in the sequence.
@@ -93,49 +93,56 @@ The Transformer architecture is depicted in Figure \ref{fig:transformer_figure}.
 
 Building on the success of the Transformer in NLP, the Vision Transformer (ViT) was proposed by \citet{dosovitskiyImageWorth16x162020} to apply the same architecture to computer vision tasks, offering a compelling alternative to the widely used Convolutional Neural Networks (CNNs). The fundamental idea behind ViT is to treat an image as a sequence of patches, analogous to how a sentence is treated as a sequence of words. By converting images into a sequential format, ViT demonstrates that the reliance on convolutions is not a necessity for vision tasks and that a general-purpose attention-based architecture can achieve state-of-the-art (SOTA) performance, especially when pre-trained on large datasets.
 
-In the computer vision (CV) field, a image is typically represented as a three-dimensional matrix with $(C, H, W)$ dimensions, where $C$ is the number of channels (e.g., $C=3$ for RGB images, and $C=1$ for grayscale images), $H$ is the height (number of pixels in vertical direction), and $W$ is the width (number of pixels in horizontal direction). Each pixel in the image has a value ranging from 0 to 255, representing the intensity of the color channel(s) at that pixel. An option-implied volatility surface is a three-dimensional plot that displays the implied volatility of a security options across different strike prices and expirations (Figure \ref{fig:vsurf_3d_plot} and Figure \ref{fig:vsurf_heatmap}). Therefore, the volatility surface can be represented as a two-dimensional matrix, which is anlogous to a single-channel grayscale image. The height $H$ of the matrix corresponds to the number of maturities $N_{\tau}$, and the width $W$ corresponds to the number of moneyness levels $N_{\delta}$. In our dataset (described in Section \ref{sec:data}), the volatility surface contains 10 maturities and 18 moneyness levels, so we can reshape the volatility surface into a "image-like" matrix with dimensions $(C, H, W) = (1, 10, 18)$. The pixel values in the matrix are the corresponding implied volatility levels, which are standardized to have zero mean and unit variance before being fed into the ViT model, just like standard image preprocessing in the computer vision field.
+In the computer vision (CV) field, a image is typically represented as a three-dimensional matrix with $(C, H, W)$ dimensions, where $C$ is the number of channels (e.g., $C=3$ for RGB images, and $C=1$ for grayscale images), $H$ is the height (number of pixels in vertical direction), and $W$ is the width (number of pixels in horizontal direction). Each pixel in the image has a value ranging from 0 to 255, representing the intensity of the color channel(s) at that pixel. In the ViT model, the input image is first divided into fixed-size patches (e.g., $16 \times 16$ pixels), and each patch is then flattened into a vector. These patch vectors are linearly embedded into a higher-dimensional space, and positional encodings are added to retain spatial information. The resulting sequence of embedded patches is then fed into a standard Transformer encoder, similar to the original Transformer architecture used in NLP. The ViT model can be visualized as shown in Figure \ref{fig:vit_figure}.
 
-\subsection{Time-Series Representation and Image Representation of Implied Volatility Surface} \label{sec:embedding}
+We consider two different model structures, mainly differing in the way of representing the implied volatility surface data as input features, that is, the "embedding" stage of the Transformer model. The next section describes the two different embedding methods in detail, and the details of the model architecture are provided in Appendix \ref{sec:appendixa}.
 
-In our study, we consider two alternative representations of the option-implied volatility surface as input to the Transformer model.
+\subsection{Embedding of the Implied Volatility Surface} \label{sec:embedding}
+\subsubsection*{Time Series Representation}
+The first method treats the volatility surface as a time series of flattened vectors over the past month. At each time $t$, the volatility surface of security $i$ can be represented as a two-dimensional matrix with dimensions $(N_{\tau}, N_{\delta})$, where $N_{\tau}$ is the number of maturities and $N_{\delta}$ is the number of moneyness levels. We then flatten the matrix into a vector of size $N_{\tau} \times N_{\delta}$. To capture the time series dynamics of the volatility surface, we collect the volatility surfaces over the past $B$ days (e.g., $B=21$ trading days for one month), and stack them together to form a sequence of vectors $\left(x_1, x_2, ..., x_B\right)$, where each vector $x_j \in \mathbb{R}^{N_{\tau} \times N_{\delta}}$ represents a flattened volatility surface at time step $j$ in the lookback window.
 
-In the first setting, we flattened each volatility surface into a vector of size $N_{\tau} \times N_{\delta}$, where $N_{\tau}$ is the number of maturities and $N_{\delta}$ is the number of moneyness levels. For each security $i$ at time $t$, we use the volatility surfaces of last $L$ days (from $t-L+1$ to $t$) as input features, resulting in a feature vector of size $(L, N_{\tau} \times N_{\delta})$. The input vector, after a simple linear embedding, as well as adding a positional encoding, is then fed into a vanilla Transformer encoder, and the last temporal output in the last layer $\mathbf{z}_L^{-1}$ is used as the dense vector representation of the volatility surface information \footnote{Alternatively, we can also use the mean pooling of all temporal outputs in the last layer $\frac{1}{21} \sum_{j=0}^{20} \mathbf{z}_L^{j}$ as the vector representation. Since the sequence here is a time series, the last temporal output is more intuitive and might contain more recent information.}. The model can be simply expressed as:
+We use a linear embedding layer to project the input vectors into the model dimension $d_{model}$, followed by adding a positional encoding to retain the temporal information\footnote{We use the sinusoid function as in \citet{vaswaniAttentionAllYou2017}, see Appendix \ref{sec:appendixa} for details}. The embedded sequence is then fed into the Transformer encoder, and we select the last temporal output in the last layer as the dense vector representation of the volatility surface information\footnote{Alternatively, we can also use the mean pooling of all temporal outputs in the last layer $\frac{1}{21} \sum_{j=0}^{20} \mathbf{z}_L^{j}$ as the vector representation. Since the sequence here is a time series, the last temporal output is more intuitive and might contain more recent information.}. The model can be simply expressed as:
 \begin{align}
-    \mathbf{v}_{i, t} = \text{Transformer}([IV_{i, t-L+1}; IV_{i, t-L+2}; ...; IV_{i, t}] | \theta)
+    \mathbf{v}_{i, t} = \text{Transformer}([IV_{i, t-B+1}; IV_{i, t-B+2}; ...; IV_{i, t}] | \theta)
 \end{align}
-Where $IV_{i, t}$ represents the flattened vector of the implied volatility surface of security $i$ at time $t$, and $\mathbf{v}_{i, t} \in \mathbb{R}^{d_{model}}$ is the output dense vector representation of the information contained in the volatility surfaces ($d_{model}$ is the model dimension), and $\theta$ is the set of parameters needed to be learned through training. $\text{Transformer}(\cdot | \theta)$ represents the non-linear mapping from the input sequence to the output vector through the Transformer encoder, including the linear embedding, positional encoding and the multiple Transformer layers, while not including the final classification head.
-This approach treats the volatility surface as a time series of flattened vectors, allowing the model to capture temporal dependencies in the volatility surface over the past month. We refer to this model as the \textbf{TF}(Transformer) model in the following sections.
+Where $IV_{i, t}$ represents the implied volatility surface of security $i$ at time $t$, and $\mathbf{v}_{i, t} \in \mathbb{R}^{d_{model}}$ is the output dense vector representation of the information contained in the volatility surfaces, and $\theta$ is the set of parameters needed to be learned through training. $\text{Transformer}(\cdot | \theta)$ represents the non-linear mapping from the input sequence to the output vector through the linear embedding, positional encoding and the Transformer encoder, while not including the final classification head. This approach treats each volatility surface as a token and construct the sequence based on the time series order. The benefit of this embedding methodology is its ability to capture the temporal dynamics of the volatility surface over a certain period, while the weakness is that it ignores the spatial structure of the volatility surface itself. We refer to this model as the \textbf{TF} (Temporal Transformer) model in the following sections.
 
-Alternatively, we can treat each volatility surface as a single-channel image, and implement the Vision Transformer (ViT) model to extract the information from the volatility surface. The ViT model, except for the final classification head, can be viewed as a non-linear mapping $ViT(\cdot | \theta)$ from the input image (volatility surface) to a dense vector representation of the image: 
+Besides the implied volatility surface of individual stocks, we also consider to incorporate the implied volatility surface of the S$\&$P 500 index options as an additional input. The index options contain essential information of market-wide risk and risk premia, in time series as well as in cross-section, providing incremental predictive power for the stock returns \citep{andersenRiskPremiaEmbedded2015,angCrossSectionVolatilityExpected2006}. We simply concatenate the flattened index volatility surface with the flattened stock volatility surface along the feature dimension, resulting in an input vector of size $(B, 2 \times N_{\tau} \times N_{\delta})$, and the model can be expressed as:
 \begin{align}
-    \mathbf{v}_{i, t} = \mathbf{ViT}(IV_{i, t} | \theta)
-\end{align}
-We refer to this model as the \textbf{ViT} (Vision Transformer) model in the following sections.
-
-Besides the implied volatility surface of individual stocks, we also consider the implied volatility surface of the S$\&$P 500 index options as an additional input. The index options contain essential information of market-wide risk and risk premia, in time series as well as in cross-section, providing incremental predictive power for the stock returns \citep{andersenRiskPremiaEmbedded2015,angCrossSectionVolatilityExpected2006}. For the first specification (TF model), we simply concatenate the flattened index volatility surface with the flattened stock volatility surface along the feature dimension, resulting in an input vector of size $(L, 2 \times N_{\tau} \times N_{\delta})$, and the model can be expressed as:
-\begin{align}
-    \mathbf{v}_{i, t} = \text{Transformer}([(IV_{i, t-L+1}; IV_{spx, t-L+1}); ...; (IV_{i, t}; IV_{spx, t})] | \theta)
+    \mathbf{v}_{i, t} = \text{Transformer}([(IV_{i, t-B+1}, IV_{spx, t-B+1}); ...; (IV_{i, t}, IV_{spx, t})] | \theta)
 \end{align}
 Where $IV_{spx, t}$ represents the implied volatility surface of the S$\&$P 500 index at time $t$.
 
-For the second specification (ViT model), we treat the index volatility surface as an additional channel, resulting in a two-channel image with dimensions $(C, H, W) = (2, N_{\tau}, N_{\delta})$. The index volatility surface, in hence, can serve as an additional channel for the input volatility surface "image". However, unlike standard RGB images, where the three channels (Red, Green, Blue) contain correlated and complementary information about the same object, the two implied volatility surfaces in our case contain semantically distinct and independent information. This poses a challenge for the standard ViT model, which is designed to process images with correlated channels. Inspired by \cite{baoChannelVisionTransformers2024}, we use the so-called Channel ViT model for the embedding of the multiple volatility surfaces. 
+\subsubsection*{Image Representation}
+An option-implied volatility surface can be represented as a three-dimensional plot that displays the implied volatility of a security options across different strike prices and expirations (Figure \ref{fig:vsurf_3d_plot}). Therefore, the volatility surface is analogous to a single-channel grayscale image: The height $H$ of the matrix corresponds to the number of maturities $N_{\tau}$, and the width $W$ corresponds to the number of moneyness levels $N_{\delta}$ (Figure \ref{fig:vsurf_heatmap}). 
 
-Specifically, the Channel ViT model, shown in Figure \ref{fig:channel_vit_figure}, processes each input channel (volatility surface) independently in the embedding stage. Each channel (volatility surface) is split into patches, linearly embedded, and employs a set of learnable channel embeddings to encode the channel-specific information besides the positional embeddings. The resulting sequence of vectors from all channels is then concatenated and fed into a standard Transformer encoder, similar to the original ViT model. Since the two volatility surfaces have the exactly the same structure (same maturities and moneyness levels), they share a common positional encoding matrix. The model can be expressed as:
+We implement a standard Vision Transformer (ViT) model to extract the information from the volatility surface. Each volatility surface $IV_{i,t}$ is reshape as a three-dimensional matrix with dimensions $(1, N_{\tau}, N_{\delta})$, where the first dimension represents the single channel of the grayscale image. The ViT model splits the input image into fixed-size patches. In this study, we simply set the patch size to be $(1, 1)$, meaning that each patch contains a single volatility value in the surface. Each patch (volatility value) is linearly embedded into a higher-dimensional space ($d_{model}$), and learnable positional encoding is added to retain the spatial information, as well as a learnable classification token (CLS token) is prepended to the sequence of embedded patches (see more details in Appendix \ref{sec:appendixa}). The resulting sequence of embedded patches is then fed into a standard Transformer encoder. Finally, the output corresponding to the CLS token in the last layer is selected as the dense vector representation of the volatility surface information. The model can be simply expressed as:
+\begin{align}
+    \mathbf{v}_{i, t} = \mathbf{ViT}(IV_{i, t} | \theta)
+\end{align}
+Where the $ViT(\cdot | \theta)$ denote the non-linear mapping from the input image (volatility surface) to a dense vector representation of the image, except for the final classification head.
+We refer to this model as the \textbf{ViT} (Vision Transformer) model in the following sections.
+
+We also consider to incorporate the index volatility surface as the additional input, and it's natural to treat the index volatility surface as another channel of the input image. However, unlike standard RGB images, where the three channels (Red, Green, Blue) contain correlated and complementary information about the same object, the two implied volatility surfaces in our case contain semantically distinct and independent information. This poses a challenge for the standard ViT model, which is designed to process images with correlated channels. Inspired by \cite{baoChannelVisionTransformers2024}, we use the so-called ChannelViT model for the embedding of the multiple volatility surfaces. Specifically, the ChannelViT model, shown in Figure \ref{fig:channel_vit_figure}, processes each input channel (volatility surface) independently in the embedding stage. Each channel (volatility surface) is split into patches, linearly embedded, and employs a set of learnable channel embeddings to encode the channel-specific information besides the positional embeddings. The resulting sequence of vectors from all channels is then concatenated and fed into the Transformer encoder. Since the two volatility surfaces have the exactly the same structure (same maturities and moneyness levels), they share a common positional encoding matrix. The model can be expressed as:
 \begin{align}
     \mathbf{v}_{i, t} = \mathbf{ViT}([IV_{i, t}, IV_{spx, t}] | \theta)
 \end{align}
 Where $[IV_{i, t}, IV_{spx, t}]$ represents the two-channel volatility surface image, with the first channel being the stock volatility surface and the second channel being the index volatility surface at the same time $t$.
 
+\subsubsection*{Temporal-Spatial Hybrid Representation}
+A natural extension of the above two embedding methods is to combine both the temporal dynamics and spatial structure of the volatility surface, which regard the volatility surface data as a sequence of images over time, similar to a video data. For example, this can be achieved by stacking the volatility surfaces over the past $B$ days as multiple channels of a single input image, and implementing a ChannelViT model to extract the information. However, this approach would lead to a very long sequence of inputs, resulting in high computational costs and memory requirements.
+
+Alternatively, we can utilize more advanced architectures that combine the strengths of both temporal and spatial modeling, such as TimeSformer \citep{bertasiusSpaceTimeAttentionAll2021} and Video Vision Transformer (ViViT) \citep{arnabViViTVideoVision2021}, which are specifically designed for video data. These models employ specialized attention mechanisms to effectively capture both temporal and spatial dependencies in the data. However, these higher-complexity models require significantly more computational resources and larger datasets for training, which may not be feasible in our current setting. Therefore, we leave the exploration of these hybrid models for future research.
 
 
 \subsection{Discretization of Returns} \label{sec:classification}
 
-Utilizing the dense vector representation $\mathbf{v}_{i, t}$ obtained from the ViT model, a classification head is attached to perform classification tasks. In our study, such a classification head is a single linear layer followed by a softmax function \footnote{In the original ViT paper, \citet{dosovitskiyImageWorth16x162020} used a multi-layer perceptron (MLP) with one hidden layer at pre-training time and used a single linear layer at fine-tuning time. A recent update, \citet{beyerBetterPlainViT2022} from some of the same authors of the original paper suggests that a simple linear layer at the end is not significantly worse than an MLP. We use a single linear layer for simplicity reason.}, which maps the vector representation $\mathbf{v}_{i, t}$ to a probability distribution over the classes:
+Utilizing the dense vector representation $\mathbf{v}_{i, t}$ obtained from the ViT model, a classification head is attached to perform classification tasks. In our study, such a classification head is a single linear layer followed by a softmax function, as shown in Figure \ref{fig:transformer_figure} and \ref{fig:vit_figure} \footnote{In the original ViT paper, \citet{dosovitskiyImageWorth16x162020} used a multi-layer perceptron (MLP) with one hidden layer at pre-training time and used a single linear layer at fine-tuning time. A recent update, \citet{beyerBetterPlainViT2022} from some of the same authors of the original paper suggests that a simple linear layer at the end is not significantly worse than an MLP. We use a single linear layer for simplicity reason.}, which maps the vector representation $\mathbf{v}_{i, t}$ to a probability distribution over the classes:
 \begin{align}
 \mathbf{p}_{i,t} &= \text{softmax}(W_c \cdot \mathbf{v}_{i, t} + b_c) \\
 \text{softmax}(\mathbf{x})_j &= \frac{e^{x_j}}{\sum_{k=1}^{K} e^{x_k}}, \quad j = 1, ..., K
 \end{align}
-where $W_c \in \mathbb{R}^{K \times d_{model}}$ and $b_c \in \mathbb{R}^{K}$ are the weights and bias of the classification head, and $K$ is the number of classes. The output $\mathbf{p}_{i,t} \in \mathbb{R}^{K}$ is a probability vector, where each element $\mathbf{p}_{i,t}(k)$ represents the predicted probability of stock $i$'s return falling into class $k$ at time $t$.
+where $W_c \in \mathbb{R}^{K \times d_{model}}$ and $b_c \in \mathbb{R}^{K}$ are the weights and bias of the linear layer in the classification head, and $K$ is the number of classes. The output $\mathbf{p}_{i,t} \in \mathbb{R}^{K}$ is a probability vector, where each element $\mathbf{p}_{i,t}(k)$ represents the predicted probability of stock $i$'s return falling into class $k$ at time $t$.
 
 The simplest classification is the binary classification, where the number of classes $K=2$. For example, we can classify the stock return into "up" and "down" classes based on whether the future return is positive or negative, as in \citet{jiangReImaginingPriceTrends2023}. Alternatively, the stock return can be classified into "safe" and "crash" classes based on whether the future return is above a certain negative value (e.g., -10\%). In general, we denote $y_{i, t}$ as the binary variable indicating whether stock $i$'s return falls into the two classes defined by a specific threshold $q$ at time $t$:
 \begin{align}
@@ -180,7 +187,7 @@ We apply multiple methods for parameter initialization: for weights in the patch
 We train each model using annually updated rolling window, given the time-varying universe of stocks in \ref{fig:num_stocks_vsurf}. Specifically, we use a 8-year in-sample period, with 6 years for training and 2 years for validation, to predict the out-of-sample returns for the subsequent year. The first training period starts from January 1996 to December 2003, and the trained model is then used to predict out-of-sample returns for the subsequent year 2004. The model is then updated with the data from 2004, and used to predict out-of-sample returns for 2005. This process continues until August 2023, the last month of our dataset. Overall, the out-of-sample prediction period is from January 2004 to August 2023, which contains around 20 years of results. The daily dataset provides a large number of training samples, which is crucial for training such a large deep learning model, while we only collect the out-of-sample predictions at the end of each month for empirical analysis. Since the stochastic nature of the Vision Transformer model, we train each specific model for five times and calculate the average predictions, following \citet{guEmpiricalAssetPricing2020}.
 
 \section{Empirical Results} \label{sec:binary_results}
-\subsection{Binary Classification} \label{sec:binary_classification}
+\subsection{Binary Classification: Up and Down} \label{sec:binary_classification}
 We begin with the simplest binary classification problem ($K = 2$). Following \citet{jiangReImaginingPriceTrends2023}, the stock returns are simply classified into "up" and "down" classes based on whether the future return is positive or negative. Besides the simplicity and interpretability, one remarkable benefit of such binary classification is that the two classes are naturally more balanced in our dataset, which is to say, there are approximately $50\%$ "up" labels and $50\%$ "down" labels. This is crucial for the training of such deep learning or machine learning models, since imbalanced classes can lead to suboptimal performance, as the model may become biased towards the majority class \citep{heLearningImbalancedData2009a}.
 
 We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days), which is common in the literature of cross-section of stock returns studies. We consider four different model specifications: (1) Temporal Transformer (TF) model with only stock volatility surface as input, the lookback window is $L=21$ days, covering the last month. Since the volatility surface data contains 10 maturities ($N_{\tau}=10$) and 18 moneyness levels ($N_{\delta}=18$), we call this model \textbf{TF180}; (2) Temporal Transformer (TF) model with both stock and index volatility surfaces as input, the lookback window is also $L=21$ days, resulting in an input size of $2 \times 10 \times 18 = 360$ features per day, we call this model \textbf{TF360}; (3) Vision Transformer (ViT) model with only stock volatility surface as input, we call this model \textbf{ViT180}; (4) Channel Vision Transformer (Channel ViT) model with both stock and index volatility surfaces as input, we call this model \textbf{ViT360}.
@@ -202,9 +209,9 @@ Since the profit of the long-short portfolio mainly drives from the short leg (d
 Following \citet{jiangReImaginingPriceTrends2023}, we conduct a logistic regression of the realized future return indicator on the out-of-sample forecasted probabilities, while controlling for the other option-based and fundamental characteristics. We focus on the best-performing ViT360 model, and Table \ref{tab:logistic_reg_binary_full} reports the results. The dependent variable is an indicator for a positive 1-month future return, and the positive and significant coefficient of our predicted probability indicates a strong predictive power, even after controlling for the previously studied characteristics. In Table \ref{tab:logistic_reg_crash_full}, we further conduct a series of logistic regressions using the crash indicator as the dependent variable, defined as whether the future return is below certain negative thresholds (-10\%, -20\%, -30\%). Consistent with the strong predictive power for extreme negative returns discussed above, the coefficients of our predicted probabilities are significantly negative and have larger economic magnitudes, compared the results when using the positive return indicator as the dependent variable.
 
 
-\section{Distribution Prediction} \label{sec:multi_results}
+\subsection{Multi-Class Classification: Joint Distribution of Stock and Market Returns} \label{sec:multi_joint}
 In this section, we extend our analysis to multi-class classification problems ($K > 2$). Furthermore, we try to predict the joint distribution of future stock returns, as well as the market return, by simultaneously predicting the classes of both stock and market returns. 
-\subsection{Discretization of Joint Returns} \label{sec:joint_classification}
+\subsubsection*{Discretization of Joint Returns} \label{sec:joint_classification}
 
 
 
@@ -246,7 +253,7 @@ In this section, we extend our analysis to multi-class classification problems (
 \begin{tablenotes}
     % \footnotesize
     % \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
-    \item This table reports the monthly average returns of equal-weight (top panel) and value-weight (bottom panel) decile portfolios formed on the out-of-sample predicted "up" probability $\hat{P}(r_{i,t+1}^{21} > 0)$ from four different model specifications described in Section \ref{sec:binary_classification}. The long-short portfolio (10-1) is formed by longing the highest decile and shorting the lowest decile. The portfolios are rebalanced monthly and held for one month. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
+    \item This table reports the monthly average returns of equal-weight (top panel) and value-weight (bottom panel) decile portfolios formed on the out-of-sample predicted "up" probability $\hat{P}(r_{i,t+1}^{21} > 0)$ from four different model specifications described in Section \ref{sec:binary_classification}. The long-short portfolio ($10 - 1$) is formed by longing the highest decile and shorting the lowest decile. The portfolios are rebalanced monthly and held for one month. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
@@ -325,7 +332,7 @@ In this section, we extend our analysis to multi-class classification problems (
 \begin{threeparttable}
 \input{Tables/ts_reg_binary_models.tex}
 \begin{tablenotes}
-\item This table reports the alpha and factor loadings from the time series regression of the long-short (10 - 1) value-weighted portfolio returns on the Fama-French 5 factors \citep{famaFivefactorAssetPricing2015} augmented with the momentum factor \citep{carhartPersistenceMutualFund1997}. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
+\item This table reports the alpha and factor loadings from the time series regression of the long-short ($10 - 1$) value-weighted portfolio returns on the Fama-French 5 factors \citep{famaFivefactorAssetPricing2015} augmented with the momentum factor \citep{carhartPersistenceMutualFund1997}. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
@@ -345,7 +352,7 @@ In this section, we extend our analysis to multi-class classification problems (
 \begin{threeparttable}
 \input{Tables/ts_reg_binary_models_alt.tex}
 \begin{tablenotes}
-\item This table reports the alpha and factor loadings from the time series regression of the long-short (10 - 1) value-weighted portfolio returns on a set of option-based factors described in Appendix \ref{sec:appendixb}. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
+\item This table reports the alpha and factor loadings from the time series regression of the long-short ($10 - 1$) value-weighted portfolio returns on a set of option-based factors described in Appendix \ref{sec:appendixb}. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
@@ -430,7 +437,7 @@ In this section, we extend our analysis to multi-class classification problems (
 \begin{threeparttable}
 \input{Tables/kmeans100_summary_stats.tex}
 \begin{tablenotes}
-\item This
+    \item This table reports
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
@@ -601,22 +608,27 @@ In this section, we extend our analysis to multi-class classification problems (
 \renewcommand{\thefigure}{\thesection.\arabic{figure}}
 \setcounter{table}{0}
 \setcounter{figure}{0}
-\section{Vision Transformer Model Structure} \label{sec:appendixa}
+\section{More about Transformer} \label{sec:appendixa}
 %\addcontentsline{toc}{section}{Appendix A}
-The architecture of the ViT, shown in Figure \ref{fig:vit_figure}, adapts the original Transformer in the following way:
-\begin{enumerate}
-    \item \textbf{Image Patching and Embedding}: The ViT model first reshapes the input image from a 2D grid of pixels into a sequence of flattened 2D patches. A image is typically represented as $\mathbf{x} \in \mathbb{R}^{H\times W \times C}$, where $(H, W)$ is the height and width of the original image, $C$ is the number of channels (e.g., RGB). In the first stage, it is divided into $N$ patches $[\mathbf{x}_p^1, \mathbf{x}_p^2, ..., \mathbf{x}_p^N]$, where each patch $\mathbf{x}_p^i \in \mathbb{R}^{P \times P \times C}$ is a small square region of the image with size $(P, P)$ pixels, and $N = (H \times W) / (P^2)$ is the number of patches. These patches are then flattened and mapped to a latent D-dimensional embedding space through a trainable linear projection: $[\mathbf{x}_p^i] \rightarrow [\mathbf{x}_p^i E]$, where $E \in \mathbb{R}^{(P^2 \cdot C) \times D}$. This process converts the 2D spatial structure of the image into a 1D sequence of patch embeddings $[\mathbf{x}_p^1 E; \mathbf{x}_p^2 E; ...; \mathbf{x}_p^N E] \in \mathbb{R}^{N \times D}$, suitable for input into the Transformer encoder.
-    \item \textbf{Learnable Class Token}: Inspired by the [CLS] token used in BERT (Bidirectional Encoder Representations from Transformers) model \citep{devlinBERTPretrainingDeep2019}, a learnable embedding is prepended to the sequence of patch embeddings. The state of this token at the output of the Transformer encoder serves as the aggregate image representation for classification tasks.
-    \item \textbf{Positional Embeddings}: Similar to the positional encodings in the original Transformer, the ViT adds learnable 1D positional embeddings to the patch embeddings to retain spatial information. These embeddings allow the model to learn the relative positions of the image patches.
-    
-    The flattened patches, along with the class token and positional embeddings, are served as input to the Transformer encoder:
-    \begin{align}
-        \mathbf{z}_0 = [\mathbf{x}_{class}; \mathbf{x}_p^1 E; \mathbf{x}_p^2 E; ...; \mathbf{x}_p^N E] + E_{pos}
-    \end{align}
-    where $E \in \mathbb{R}^{(P^2 \cdot C) \times D}$ is the patch embedding projection matrix, $E_{pos} \in \mathbb{R}^{(N+1) \times D}$ is the positional embedding matrix, and $\mathbf{z}_0 \in \mathbb{R}^{(N+1) \times D}$ is the resulting sequence of embedded patches, with length $N+1$ (including the class token) and embedding dimension $D$.
 
-    \item \textbf{Transformer Encoder}: The resulting sequence of embedded patches (including the class token) is then fed directly into a standard Transformer encoder \citep{vaswaniAttentionAllYou2017}. This encoder is composed of alternating layers of multi-head self-attention (MSA) and multi-layer perceptron (MLP) blocks, similar to the original Transformer encoder, but with some slight modifications:
-    \begin{itemize}
+\subsection{Transformer Architecture} \label{sec:transformer_encoder}
+In this section, we provide a more detailed explanation of the Transformer architecture (Figure \ref{fig:transformer_figure}) introduced by \citet{vaswaniAttentionAllYou2017}, and how we adapt it for our first model specification, the Temporal Transformer (TF) model.
+
+\begin{itemize}
+    \item \textbf{Embeddings}: The input tokens are first converted to vectors of fixed dimension $d_{model}$ through an learned embeddings. Denote the input sequence as $[\mathbf{x}^1, \mathbf{x}^2, ..., \mathbf{x}^N]$, where each token $\mathbf{x}^i \in \mathbb{R}^{d_{input}}$. The embedding layer maps each token to a $d_{model}$-dimensional vector: $[\mathbf{x}^i] \rightarrow [\mathbf{x}^i \mathbf{E}]$, where $\mathbf{E} \in \mathbb{R}^{d_{input} \times d_{model}}$ is the learned embedding matrix. The resulting sequence of embeddings is $[\mathbf{x}^1 \mathbf{E}; \mathbf{x}^2 \mathbf{E}; ...; \mathbf{x}^N \mathbf{E}] \in \mathbb{R}^{N \times d_{model}}$.
+    \item \textbf{Positional Encoding}: Since the Transformer architecture contains no recurrence or convolution, it lacks the inherent ability to capture the order of the input sequence. To address this, positional encodings are added to the input embeddings to provide information about the position of each token in the sequence. The positional encoding can be either learned or fixed, and \citet{vaswaniAttentionAllYou2017} proposed a fixed sinusoidal positional encoding defined as:
+    \begin{align}
+        PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d_{model}}}\right) \\
+        PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d_{model}}}\right)
+    \end{align}
+    where $pos$ is the position index, and $i$ is the dimension index. The positional encodings are added to the input embeddings to form the final input to the encoder:
+    \begin{align}
+        \mathbf{z}_0 = [\mathbf{x}^1 \mathbf{E}; \mathbf{x}^2 \mathbf{E}; ...; \mathbf{x}^N \mathbf{E}] + \mathbf{E}_{pos}
+    \end{align}
+    where $\mathbf{E}_{pos} \in \mathbb{R}^{N \times d_{model}}$ is the positional encoding matrix.
+    \item \textbf{Encoder}:
+    The Transformer encoder consists of $L$ identical layers, each containing two main sub-layers: Multi-Head Self-Attention (MSA) and a Position-wise Feed-Forward Networks (FFN). Each sub-layer is followed by a residual connection and layer normalization. The overall structure of the encoder can be summarized as follows:
+        \begin{itemize}
         \item \textbf{Multi-Head Self-Attention (MSA)}: This mechanism allows the model to focus on different parts of the input sequence simultaneously, capturing various aspects of the image. Each attention head computes a weighted sum of the input embeddings, where the weights are determined by the similarity between the query and key vectors. These similarity scores are calculated using Query (Q), Key (K), and Value (V) matrices, which are linear projections of the input embeddings. The attention scores are computed as:
         \begin{align}
             \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
@@ -624,40 +636,68 @@ The architecture of the ViT, shown in Figure \ref{fig:vit_figure}, adapts the or
         where $d_k$ is the dimension of the key vectors, used for scaling. The multi-head attention mechanism allows the model to jointly attend to information from different representation subspaces at different positions.
         For layer $l = 1,...,L$, the MSA block can be expressed as:
         \begin{align}
-            \mathbf{z}_l' = \text{MSA}(LN(\mathbf{z}_{l-1})) + \mathbf{z}_{l-1}
+            \mathbf{z}_l' = \text{LayerNorm}(\text{MSA}(\mathbf{z}_{l-1}) + \mathbf{z}_{l-1})
         \end{align}
-        where $LN(\cdot)$ denotes layer normalization, and $\mathbf{z}_l' \in \mathbb{R}^{(N+1) \times D}$ is the output of the MSA block at layer $l$.
-        \item \textbf{Multi-Layer Perceptron (MLP)}: Following the MSA, a position-wise feed-forward network (FFN) is applied to each position independently and identically. This FFN typically consists of two linear layers with a Gaussian Error Linear Unit (GELU) activation in between, unlike the Rectified Linear Unit (ReLU) used in the original Transformer:
+        where $\text{LayerNorm}(\cdot)$ denotes layer normalization, and $\mathbf{z}_l' \in \mathbb{R}^{N \times d_{model}}$ is the output of the MSA block at layer $l$.
+        \item \textbf{Position-wise Feed-Forward Networks (FFN)}: Following the MSA, a fully connected feed-forward network is applied to each position independently and identically. This FFN typically consists of two linear layers with a non-linear activation function (e.g., ReLU) in between. The FFN can be expressed as:
         \begin{align}
-            \text{MLP}(x) = \text{GELU}(xW_1 + b_1)W_2 + b_2
+            \text{FFN}(x) &= \text{ReLU}(xW_1 + b_1)W_2 + b_2 \\
+            \text{ReLU}(x) &= \max(0, x)
         \end{align}
         where $W_1, W_2$ are weight matrices and $b_1, b_2$ are bias vectors. Besides, dropout is applied after each fully connected layer to prevent overfitting.
-        For layer $l = 1,...,L$, the MLP block can be expressed as:
+        For layer $l = 1,...,L$, the FFN block can be expressed as:
         \begin{align}
-            \mathbf{z}_l = \text{MLP}(LN(\mathbf{z}_l')) + \mathbf{z}_l'
+            \mathbf{z}_l = \text{LayerNorm}(\text{FFN}(\mathbf{z}_l') + \mathbf{z}_l')
         \end{align}
-        where $\mathbf{z}_l \in \mathbb{R}^{(N+1) \times D}$ is the output of the MLP block at layer $l$.
-        \item \textbf{Layer Normalization}: In contrast to the post-normalization used in the original Transformer, the encoder blocks in ViT implement pre-normalization, where layer normalization is applied right before the MSA and MLP blocks, which has been shown to lead to mre effective training for deeper networks \citep{xiongLayerNormalizationTransformer2020} without the need for learning rate warm-up.
-    \end{itemize}
+        where $\mathbf{z}_l \in \mathbb{R}^{N \times d_{model}}$ is the output of the MLP block at layer $l$.
+        \end{itemize}
+    \item \textbf{Classification Head}: After passing through the $L$ layers of the Transformer encoder, the final output $\mathbf{z}_L \in \mathbb{R}^{N \times d_{model}}$ is obtained. Since our model take the sequence as a time-series data, we select the last time step's output $\mathbf{z}_L^N \in \mathbb{R}^{d_{model}}$ as the encoded vector representation of the input sequence, assuming that it contains the most relevant information for prediction. This vector is then passed through a linear layer followed by a softmax function to produce the class probabilities:
+    \begin{align}
+        \mathbf{p} = \text{softmax}(\mathbf{z}_L^N W_c + b_c) \\
+        \text{softmax}(\mathbf{a})_i = \frac{e^{a_i}}{\sum_{j=1}^{K} e^{a_j}}
+    \end{align}
+    where $W_c \in \mathbb{R}^{d_{model} \times K}$ and $b_c \in \mathbb{R}^{K}$ are the weights and bias of the linear layer, and $K$ is the number of classes. The output $\mathbf{p} \in \mathbb{R}^{K}$ represents the predicted probabilities for each class.
+\end{itemize}
+
+\subsection{Vision Transformer Architecture} \label{sec:vit}
+The architecture of the ViT, shown in Figure \ref{fig:vit_figure}, adapts the original Transformer in the following way:
+\begin{itemize}
+    \item \textbf{Image Patching and Embedding}: The ViT model first reshapes the input image from a 2D grid of pixels into a sequence of flattened 2D patches. A image is typically represented as $\mathbf{x} \in \mathbb{R}^{H\times W \times C}$, where $(H, W)$ is the height and width of the original image, $C$ is the number of channels (e.g., RGB). In the first stage, it is divided into $N$ patches $[\mathbf{x}_p^1, \mathbf{x}_p^2, ..., \mathbf{x}_p^N]$, where each patch $\mathbf{x}_p^i \in \mathbb{R}^{P \times P \times C}$ is a small square region of the image with size $(P, P)$ pixels, and $N = (H \times W) / (P^2)$ is the number of patches. These patches are then flattened and mapped to a latent D-dimensional embedding space through a trainable linear projection: $[\mathbf{x}_p^i] \rightarrow [\mathbf{x}_p^i E]$, where $E \in \mathbb{R}^{(P^2 \cdot C) \times d_{model}}$. This process converts the 2D spatial structure of the image into a 1D sequence of patch embeddings $[\mathbf{x}_p^1 E; \mathbf{x}_p^2 E; ...; \mathbf{x}_p^N E] \in \mathbb{R}^{N \times d_{model}}$, suitable for input into the Transformer encoder.
+    \item \textbf{Learnable Class Token and Positional Encoding}: Inspired by the [CLS] token used in BERT (Bidirectional Encoder Representations from Transformers) model \citep{devlinBERTPretrainingDeep2019}, a learnable embedding is prepended to the sequence of patch embeddings. The state of this token at the output of the Transformer encoder serves as the aggregate image representation for classification tasks.
+    
+    Different from the original Transformer, where the sequence has a natural order (e.g., words in a sentence, or time steps in a time series), the sequence in ViT model represents image patches, which do not have an inherent order. We follow \citet{dosovitskiyImageWorth16x162020} and add learnable positional embeddings to the patch embeddings to retain spatial information about the position of each patch in the original image. This is crucial for the model to understand the spatial relationships between different patches.
+    
+    The flattened patches, along with the class token and positional embeddings, are served as input to the Transformer encoder:
+    \begin{align}
+        \mathbf{z}_0 = [\mathbf{x}_{class}; \mathbf{x}_p^1 \mathbf{E}; \mathbf{x}_p^2 \mathbf{E}; ...; \mathbf{x}_p^N \mathbf{E}] + \mathbf{E}_{pos}
+    \end{align}
+    where $\mathbf{E} \in \mathbb{R}^{(P^2 \cdot C) \times d_{model}}$ is the patch embedding projection matrix, $\mathbf{E}_{pos} \in \mathbb{R}^{(N+1) \times d_{model}}$ is the positional embedding matrix, and $\mathbf{z}_0 \in \mathbb{R}^{(N+1) \times d_{model}}$ is the resulting sequence of embedded patches, with length $N+1$ (including the class token) and embedding dimension $d_{model}$.
+
+    \item \textbf{Encoder}: The Encoder layers used in ViT are similar to the original Transformer model, but with some slight modifications:
+    \begin{align}
+        \mathbf{z}_l' &= \text{MSA}(\text{LayerNorm}(\mathbf{z}_{l-1})) + \mathbf{z}_{l-1} \\
+        \mathbf{z}_l &= \text{FFN}(\text{LayerNorm}(\mathbf{z}_l')) + \mathbf{z}_l'
+    \end{align}
+
+    In contrast to the post-normalization used in the original Transformer, the encoder blocks in ViT implement pre-normalization, where layer normalization is applied right before the MSA and FFN blocks, which has been shown to lead to more effective training for deeper networks \citep{xiongLayerNormalizationTransformer2020} without the need for learning rate warm-up. Besides, in the FFN block, GELU (Gaussian Error Linear Unit) activation function \citep{hendrycksGaussianErrorLinear2023} is used instead of ReLU.
     
     \item \textbf{Classification Head}: For image classification, only the output vector
     corresponding to the prepended class token in the final layer ($\mathbf{z}_L^0$) is used, which serves as the aggregate representation of the entire image:
     \begin{align}
-        \mathbf{v} = LN(\mathbf{z}_L^0)
-    \end{align} 
-    This vector $\mathbf{v} \in \mathbb{R}^{D}$, which serves as an encoded vector representation of the input image, is then passed through a final classification head, typically a single linear layer followed by a softmax function, to produce the class probabilities:
-    \begin{align}
-        \mathbf{y} = \text{softmax}(\mathbf{v}W_c + b_c)
+        \mathbf{p} = \text{softmax}(\text{LayerNorm}(\mathbf{z}_L^0) W_c + b_c)
     \end{align}
-    where $W_c \in \mathbb{R}^{D \times K}$ and $b_c \in \mathbb{R}^{K}$ are the weights and bias of the classification head, and $K$ is the number of classes.
-\end{enumerate}
+    Additional layer normalization is applied to the class token output before passing it through the linear classification head, because of the pre-normalization structure of the encoder.
+\end{itemize}
 
 \section{Option-Based and Other Characteristics} \label{sec:appendixb}
 %\addcontentsline{toc}{section}{Appendix B}
 This section provides additional details on the option-based characteristics used in the empirical tests. \citet{neuhierlOptionCharacteristicsCrosssectional2022} and \citet{muravyevWhyDoesOptions2025} summarized a comprehensive list of option-based characteristics that have been shown to be useful in explaining the cross-section of stock returns. We select a subset of most significant and widely used option characteristics. Most of these variables are calculated from the standardized option-implied volatility surface data (vsurfdYYYY), while the option volume are from the trading volume data (opvoldYYYY) and the realized volatility are from the historical volatility data (hvoldYYY). Monthly sample period is from January 1996 to August 2023, same as the date range of OptionMetrics data.
+
+Thanks to the work of \citet{CFR-0112} (CZ in the following), we are able to directly download most of these option characteristics from their website \footnote{\url{https://www.openassetpricing.com/}}. The methodology that they used closely followed the original papers with only minor modifications.
+
 \begin{itemize}
-    \item $\textbf{CIV}$ \& $\textbf{PIV}$: Near At-The-Money (ATM) call and put implied volatility with maturity of 30 days and absolute delta of 0.5, following \citet{anJointCrossSection2014a}
-    \item $\Delta \textbf{CIV}$ \& $\Delta \textbf{PIV}$: Monthly change in the near ATM call and put implied volatility, also from \citet{anJointCrossSection2014a}
+    \item $\textbf{CIV}$ \& $\textbf{PIV}$: Near At-The-Money (ATM) call and put implied volatility with maturity of 30 days and absolute delta of 0.5, following \citet{anJointCrossSection2014a}.
+    \item $\Delta \textbf{CIV}$ \& $\Delta \textbf{PIV}$: Monthly change in the near ATM call and put implied volatility, also from \citet{anJointCrossSection2014a}.
     \item \textbf{SKEW}: Difference between average put and call IV, using options with 30 days to expiration and average across call with delta between 0.2 to 0.4, and put with delta between -0.2 to -0.4, following \citet{neuhierlOptionCharacteristicsCrosssectional2022}.
     \item \textbf{log(O/S)}: Total monthly option volume over all call and put options, divided by monthly stock trading volume, following \citet{johnsonOptionStockVolume2012a}.
     \item \textbf{IVSpread}: Difference between the near ATM put (delta = -0.5 and maturity = 30 days) and call (delta = 0.5 and maturity = 30 days) implied volatility, using the last daily observation of each month, following \citet{yanJumpRiskStock2011} and \citet{baliVolatilitySpreadsExpected2009}.
@@ -669,10 +709,20 @@ This section provides additional details on the option-based characteristics use
     \item \textbf{IVol-RVol}: Difference between option-implied volatility and realized volatility, following \citet{baliVolatilitySpreadsExpected2009}. Realized volatility is calculated using daily stock returns over the past 30 calendar days, and implied volatility is the near ATM IV with maturity of 30 days, average across call and put options.
 \end{itemize}
 
-Thanks to the work of \citet{CFR-0112}, we are able to directly download most of these option characteristics from their website \footnote{\url{https://www.openassetpricing.com/}}. The methodology that they used closely followed the original papers with only minor modifications. It is worth noting that we use the same name conventions as in \citet{neuhierlOptionCharacteristicsCrosssectional2022}, while the construction of these variables might be slightly different from them.
+Besides these option-based characteristics, we also include the following commonly used stock characteristics as control variables in the empirical tests: 
+\begin{itemize}
+    \item \textbf{log(ME)}: Logarithm of market capitalization, the product of stock price and number of shares outstanding.
+    \item \textbf{log(B/M)}: Logarithm of book to market ratio following \citet{famaCrossSectionExpectedStock1992}.
+    \item \textbf{Inv}: Annual growth rate of total asset following \citet{cooperAssetGrowthCrossSection2008}.
+    \item \textbf{Profit}: Operating profitability, adjusted for R\&D expenses, following \citet{ballAccrualsCashFlows2016}.
+    \item \textbf{Illiq}: \citet{amihudIlliquidityStockReturns2002} illiquidity measure, calculated as the past twelve-month average of absolute daily stock return divided by daily dollar trading volume.
+    \item \textbf{Ivol}: Idiosyncratic volatility following \citet{angCrossSectionVolatilityExpected2006}, calculated as the standard deviation of residuals from Fama-French three factor model over the past month daily data.
+    \item $\beta$: CAPM beta calculated using the historical daily returns over a 252-trading-day estimation window and a 126-trading-day minimum requirement, provided by the Beta Suite by WRDS\footnote{\url{https://wrds-www.wharton.upenn.edu/pages/get-data/beta-suite-wrds/}}.
+    \item $ret_{1, 0}$: Short-term reversal, calculated as the stock return over the previous month \citep{jegadeeshEvidencePredictableBehavior1990}.
+    \item $ret_{12, 2}$: Momentum, calculated as the stock return over the past 11 months, skipping the most recent month ($t-2$ to $t-12$), following \citet{jegadeeshReturnsBuyingWinners1993a}.
+\end{itemize}
 
-Besides these option-based characteristics, we also include the following commonly used stock characteristics as control variables in the empirical tests: CAPM beta (beta), logarithm of market capitalization (log(ME)), past 1-month return ($ret_{1, 0}$), past 12-month return excluding the most recent month ($ret_{12, 2}$). These stock characteristics are also downloaded from \citet{CFR-0112}, except for the CAPM beta, which is downloaded from the Beta Suite by WRDS\footnote{\url{https://wrds-www.wharton.upenn.edu/pages/get-data/beta-suite-wrds/}}, calculated using daily returns over a 252-trading-day estimation window and a 126-trading-day minimum requirement.
-
+\clearpage
 \section{Additional Results} \label{sec:appendixc}
 %\addcontentsline{toc}{section}{Appendix C}
 \begin{table}[htbp]
