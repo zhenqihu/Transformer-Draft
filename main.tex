@@ -57,7 +57,17 @@
 
 
 \section{Introduction} \label{sec:introduction}
-The information contained in options market has been widely studied, along with 
+The information contained in options market has been widely studied since the birth of options 
+market. There exists a series of well-developed theories that uncover the risk-neutral, as well as physical or real probabilities of the underlying asset returns from their option prices \citep{breedenPricesStateContingentClaims1978,coxSurveyNewResults1976,coxValuationOptionsAlternative1976,rossRecoveryTheorem2015}. However, the practical implementation of extracting the information from option prices is often challenging, due to the discrete nature of option strike prices and maturities, limited liquidity of option market, as well as the model misspecification issues.
+
+Recent years have witnessed the rapid development of machine learning and deep learning techniques, and their applications in the research of finance area \citep{guEmpiricalAssetPricing2020,bianchiBondRiskPremiums2021,jiangReImaginingPriceTrends2023}. These advanced methods have shown great potential in extracting complex, non-linear patterns from high-dimensional, and unstructured data, which are often difficult to capture using traditional econometric models. Motivated by these advancements, we propose to leverage the well known deep learning architecture, namely the Transformer model, to recover the content embedded in the options market. 
+
+Since the work of \citet{vaswaniAttentionAllYou2017}, the Transformer model has revolutionized the field of natural language processing (NLP) and has been widely adopted in various applications, such as machine translation, text summarization, and sentiment analysis. The core component of the Transformer architecture is the self-attention mechanism, which allows the model to weigh the importance of different words in a sentence when making predictions. This mechanism enables the model to capture long-range dependencies and contextual information effectively, leading to significant improvements in performance compared to previous models, such as recurrent neural networks (RNNs) and convolutional neural networks (CNNs). Building on the success of the Transformer, large language models (LLMs), such as GPT series \citep{brownLanguageModelsAre2020} and BERT \citep{devlinBERTPretrainingDeep2019}, have further pushed the boundaries of what is possible with deep learning in NLP, achieving state-of-the-art results on a wide range of tasks.
+
+We use the option-implied volatility surface (IVS) as the main input feature to our deep learning models. The IVS is a three-dimensional representation of implied volatilities across different strike prices and maturities, and empirical literatures have shown that transformations of the IVS have significant predictive power for future stock returns \citep{baliVolatilitySpreadsExpected2009,xingWhatDoesIndividual2010,yanJumpRiskStock2011}. Moreover, \citet{martinWhatExpectedReturn2017,martinWhatExpectedReturn2019} proposed a options-based bounds on expected stock returns.
+
+
+\section{Related Work}
 
 
 \section{Data} \label{sec:data}
