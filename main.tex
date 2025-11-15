@@ -60,14 +60,19 @@
 The information contained in options market has been widely studied since the birth of options 
 market. There exists a series of well-developed theories that uncover the risk-neutral, as well as physical or real probabilities of the underlying asset returns from their option prices \citep{breedenPricesStateContingentClaims1978,coxSurveyNewResults1976,coxValuationOptionsAlternative1976,rossRecoveryTheorem2015}. However, the practical implementation of extracting the information from option prices is often challenging, due to the discrete nature of option strike prices and maturities, limited liquidity of option market, as well as the model misspecification issues.
 
-Recent years have witnessed the rapid development of machine learning and deep learning techniques, and their applications in the research of finance area \citep{guEmpiricalAssetPricing2020,bianchiBondRiskPremiums2021,jiangReImaginingPriceTrends2023}. These advanced methods have shown great potential in extracting complex, non-linear patterns from high-dimensional, and unstructured data, which are often difficult to capture using traditional econometric models. Motivated by these advancements, we propose to leverage the well known deep learning architecture, namely the Transformer model, to recover the content embedded in the options market. 
+Option-implied volatilty surface (IVS), as the most prominent representation of option prices, has been shown to have significant predictive power for future stock returns in the empirical options literature. For example, \cite{yanJumpRiskStock2011} showed that the spread between the implied volatilities of at-the-money (ATM) put and call with 30 days to expiration can predict the stock returns over the next month. \citet{xingWhatDoesIndividual2010} also found that the volatility skew, as measured by the difference between implied volatilities of out-of-the-money (OTM) put and at-the-money (ATM) call with the same maturity, has the ability to forecast stock returns. Other studies have also documented a variety of option-based predictors, mostly derived from the implied volatility surface. \footnote{See \citet{baliVolatilitySpreadsExpected2009,martinWhatExpectedReturn2017,martinWhatExpectedReturn2019,anJointCrossSection2014a,baltussenUnknownUnknownsUncertainty2018} etc.}
+
+However, most of the existing option-based predictors are just transformations of a small subset of the implied volatility surface, which might not fully capture the rich information embedded in the entire surface. Moreover, the linear transformations used in most predictors may not be sufficient to extract the complex, non-linear patterns from the high-dimensional volatility surface data. Therefore, it is natural to ask whether we can develop more advanced methods to recover the information contained in the entire implied volatility surface, and whether such information can provide additional predictive power for future stock returns.
+
+Recent years have witnessed the rapid development of machine learning and deep learning techniques, and their applications in the research of asset pricing fields \citep{guEmpiricalAssetPricing2020,bianchiBondRiskPremiums2021,jiangReImaginingPriceTrends2023}. These advanced methods have shown great potential in extracting complex, non-linear patterns from high-dimensional, and unstructured data, which are often difficult to capture using traditional econometric models. Motivated by these advancements, we propose to leverage the well known deep learning architecture, namely the Transformer model, to extract the information from the option-implied volatility surface and predict future stock returns.
 
 Since the work of \citet{vaswaniAttentionAllYou2017}, the Transformer model has revolutionized the field of natural language processing (NLP) and has been widely adopted in various applications, such as machine translation, text summarization, and sentiment analysis. The core component of the Transformer architecture is the self-attention mechanism, which allows the model to weigh the importance of different words in a sentence when making predictions. This mechanism enables the model to capture long-range dependencies and contextual information effectively, leading to significant improvements in performance compared to previous models, such as recurrent neural networks (RNNs) and convolutional neural networks (CNNs). Building on the success of the Transformer, large language models (LLMs), such as GPT series \citep{brownLanguageModelsAre2020} and BERT \citep{devlinBERTPretrainingDeep2019}, have further pushed the boundaries of what is possible with deep learning in NLP, achieving state-of-the-art results on a wide range of tasks.
 
-We use the option-implied volatility surface (IVS) as the main input feature to our deep learning models. The IVS is a three-dimensional representation of implied volatilities across different strike prices and maturities, and empirical literatures have shown that transformations of the IVS have significant predictive power for future stock returns \citep{baliVolatilitySpreadsExpected2009,xingWhatDoesIndividual2010,yanJumpRiskStock2011}. Moreover, \citet{martinWhatExpectedReturn2017,martinWhatExpectedReturn2019} proposed a options-based bounds on expected stock returns.
+In this paper, we leverage the vanilla Transformer model and its variant in computer vision, namely the Vision Transformer (ViT) \citep{dosovitskiyImageWorth16x162020}, to construct non-linear local feature representations from the option-implied volatility surface data. In the first approach, we treat the volatility surface as a time series of flattened vectors over a certain "lookback" window, and use the Transformer encoder to capture the temporal dynamics of the volatility surface. In the second approach, we treat the volatility surface as a single-channel image, and use the ViT model to extract the spatial structure of the volatility surface.
 
+The implied volatility surface, expressed as a two-dimensional matrix across different maturities and moneyness levels, can be naturally represented as a single-channel (e.g., grayscale) image, where the height corresponds to the number of maturities and the width corresponds to the number of moneyness levels. This representation allows us to leverage the powerful computer vision and image processing techniques developed in the deep learning literature. \citet{kellyDeepLearningImplied2023} 
 
-\section{Related Work}
+% \section{Related Work}
 
 
 \section{Data} \label{sec:data}
@@ -84,7 +89,7 @@ Where $IV_{i,t}(\tau, \delta)$ represents the implied volatility level at maturi
 
 We obtain the daily return data from CRSP for all firms listed on NYSE, AMEX, and NASDAQ, as well as the S$\&$P 500 index. For each security $i$ at time $t$, we calculate the cumulative return on security $i$ from day $t$ to day $t+H$ as:
 \begin{align}
-    r_{i,t}^H = \prod_{j=0}^{H-1} (1 + r_{i,t+j}) - 1
+    r_{i,t}^H = \prod_{j=1}^{H} (1 + r_{i,t+j}) - 1
 \end{align}
 
 We link the volatility surface data from OptionMetrics with the return data from CRSP using a linking table provided by WRDS. The final dataset spans from January 1996 to August 2023, and Figure \ref{fig:num_stocks_vsurf} shows the coverage of the stocks with available volatility surface and return data over time. The number of stocks increases significantly over time, from below 1000 to over 5000 in recent years.
@@ -165,10 +170,12 @@ The simplest classification is the binary classification, where the number of cl
 \end{align}
 where $r_{i,t}^H$ is the cumulative return of stock $i$ from day $t$ to day $t+H$, and the output $\hat{y}_{i,t} = \mathbf{p}_{i,t}(1)$ represents the predicted probability of stock $i$'s return being in class 1 at time $t$.  The threshold $q$ can be set to 0 for the "up/down" classification. \footnote{In the special case of binary classification ($K=2$), the softmax function reduces to the logistic (sigmoid) function.}
 
-For multi-class classification ($K > 2$), the stock returns can be discretized into multiple classes based on quantiles or specific thresholds. Assume $\{q_0, q_1, ..., q_K\}$ are the thresholds that define the $K$ classes, where $q_0 = -\infty$ and $q_K = +\infty$. In general, we denote $y_{i, t}$ as the categorical variable indicating which class stock $i$'s return falls into at time $t$:
+For multi-class classification ($K > 2$), the stock returns can be discretized into multiple classes based on quantiles or specific thresholds. Assume $\{q_0, q_1, ..., q_K\}$ are the thresholds that define the $K$ classes, where $q_0 = \min(r)$ and $q_K = \max(r)$. For example, we can classify the stock returns into quintiles ($K=5$) based on the 20th, 40th, 60th, and 80th percentiles of the return distribution.
+
+In general, we denote $y_{i, t}$ as the categorical variable indicating which class stock $i$'s return falls into at time $t$:
 \begin{align}
     y_{i, t} &= k, \quad \text{if } r_{i,t}^H \in (q_{k-1}, q_k], \quad k = 1, 2, ..., K \\
-    \hat{y}_{i,t}^k &= \mathbf{p}_{i,t}(k)
+    \hat{y}_{i,t}^k &= \mathbf{p}_{i,t}(k) = \hat{P}\left(r_{i,t}^H \in (q_{k-1}, q_k]\right)
 \end{align}
 
 \subsection{Training Process} \label{sec:training}
@@ -219,9 +226,19 @@ Since the profit of the long-short portfolio mainly drives from the short leg (d
 Following \citet{jiangReImaginingPriceTrends2023}, we conduct a logistic regression of the realized future return indicator on the out-of-sample forecasted probabilities, while controlling for the other option-based and fundamental characteristics. We focus on the best-performing ViT360 model, and Table \ref{tab:logistic_reg_binary_full} reports the results. The dependent variable is an indicator for a positive 1-month future return, and the positive and significant coefficient of our predicted probability indicates a strong predictive power, even after controlling for the previously studied characteristics. In Table \ref{tab:logistic_reg_crash_full}, we further conduct a series of logistic regressions using the crash indicator as the dependent variable, defined as whether the future return is below certain negative thresholds (-10\%, -20\%, -30\%). Consistent with the strong predictive power for extreme negative returns discussed above, the coefficients of our predicted probabilities are significantly negative and have larger economic magnitudes, compared the results when using the positive return indicator as the dependent variable.
 
 
-\subsection{Multi-Class Classification: Joint Distribution of Stock and Market Returns} \label{sec:multi_joint}
-In this section, we extend our analysis to multi-class classification problems ($K > 2$). Furthermore, we try to predict the joint distribution of future stock returns, as well as the market return, by simultaneously predicting the classes of both stock and market returns. 
-\subsubsection*{Discretization of Joint Returns} \label{sec:joint_classification}
+\subsection{Multi-Class Classification: Quantile Bins} \label{sec:multi_quantile}
+In this section, we extend our analysis to multi-class classification problems ($K > 2$). Since the stock returns are continuous variables, we discretize them into multiple classes based on the quantiles of the unconditional stock return distribution, as described in Section \ref{sec:classification}. 
+
+For each class $k$, we approximately assume that the stock returns falling into class $k$ follow a uniform distribution within the interval $(q_{k-1}, q_k]$. Therefore, the predicted probability $\hat{y}_{i,t}^k$ can be interpreted as the likelihood of stock $i$'s return falling into the interval $(q_{k-1}, q_k]$ at time $t$. Based on this interpretation, we can estimate the moment forecasts of the stock returns using the predicted probabilities from the multi-class classification model.
+\begin{align}
+    \mathbb{E}(r_{i,t}^H)  &\approx \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \bar{q}_k \\
+    \operatorname{Var}(r_{i,t}^H) &\approx \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \left(\bar{q}_k - \mathbb{E}(r_{i,t}^H)\right)^2 \\
+    \operatorname{Skew}(r_{i,t}^H) &\approx \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \left(\bar{q}_k - \mathbb{E}(r_{i,t}^H)\right)^3 / \left(\operatorname{Var}(r_{i,t}^H)\right)^{3/2} \\
+    \operatorname{Kurt}(r_{i,t}^H) &\approx \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \left(\bar{q}_k - \mathbb{E}(r_{i,t}^H)\right)^4 / \left(\operatorname{Var}(r_{i,t}^H)\right)^{2}
+\end{align}
+Where $\bar{q}_k = (q_{k-1} + q_k) / 2$ is the midpoint of the interval $(q_{k-1}, q_k]$. The estimated $\mathbb{E}(r_{i,t}^H)$, $\operatorname{Var}(r_{i,t}^H)$, $\operatorname{Skew}(r_{i,t}^H)$, and $\operatorname{Kurt}(r_{i,t}^H)$ represent the predicted mean, variance, skewness, and kurtosis of stock $i$'s return from day $t$ to day $t+H$, respectively.
+
+Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by the predicted mean return $\mathbb{E}(r_{i,t}^{21})$ are broadly increasing with the portfolio's average $\mathbb{E}(r_{i,t}^{21})$, and the predicted mean return captures significant cross-sectional variation in stock returns, with a R-squared from 77.1\% to 93.7\%. In this section, we focus on the ViT360 model, and select $K=100$ classes (percentile bins) for the multi-class classification. The results from other model specification (TF360) are reported in Figure \ref{fig:port_mu_diff_np_tf} and using different number of classes ($K=10, 20, 50$) are reported in Figure \ref{fig:port_mu_diff_k}. We also report the results using beta, size, book-to-market ratio, and momentum portfolios in Figure \ref{fig:port_diff_char}.
 
 
 
@@ -442,6 +459,70 @@ In this section, we extend our analysis to multi-class classification problems (
     table-space-text-pre = {(},
     table-space-text-post = {)} 
 }
+\caption{Summary Statistics of Quantile100 Classification}
+\label{tab:quantile100_summary_stats}
+\begin{threeparttable}
+\input{Tables/quantile100_summary_stats.tex}
+\begin{tablenotes}
+    \item This table reports
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+\clearpage
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{6pt}
+\small
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Time Series Regression, Quantile100 Classification}
+\label{tab:ts_reg_quantile100_crsp}
+\begin{threeparttable}
+\input{Tables/ts_reg_quantile100_crsp.tex}
+\begin{tablenotes}
+    \item This table reports
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+\clearpage
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{6pt}
+\small
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Fama-MacBeth Regression, Quantile100 Classification}
+\label{tab:fm_reg_quantile100_crsp}
+\begin{threeparttable}
+\input{Tables/fm_reg_quantile100_crsp.tex}
+\begin{tablenotes}
+    \item This table reports
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+
+\clearpage
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{6pt}
+\small
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
 \caption{Summary Statistics of K-Means Clustering, 100 Clusters}
 \label{tab:kmeans100_summary_stats}
 \begin{threeparttable}
@@ -582,6 +663,18 @@ In this section, we extend our analysis to multi-class classification problems (
     \caption{Cumulative Returns, S\&P 500 Stocks. This figure shows the cumulative log return of equal-weight decile portfolios formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$ from January 2004 to August 2023. The sample includes only stocks that are part of the S\&P 500 index. The "Low" series represents the 1/3 stocks with the lowest predicted "up" probabilities, while the "High" series represents the 2/3 stocks with the highest predicted "up" probabilities. The "SPY" series represents the cumulative log return of the S\&P 500 index ETF (SPY) over the same period.}
     \label{fig:cumlogret_binary_sp}
 \end{figure}
+
+
+\clearpage
+\begin{figure}[htbp]
+    \vfill
+    \centering
+    \includegraphics[width=1\textwidth]{Figures/port_mu_diff_np.png}
+    \caption{Portfolio sorted by expected stock returns, for different number of portfolios.}
+    \label{fig:port_mu_diff_np}
+\end{figure}
+
+
 
 \clearpage
 \begin{figure}[htbp]
@@ -826,7 +919,32 @@ Besides these option-based characteristics, we also include the following common
 \end{threeparttable}
 \end{table}
 
+\clearpage
+\begin{figure}[htbp]
+    \vfill
+    \centering
+    \includegraphics[width=1\textwidth]{Figures/port_mu_diff_k.png}
+    \caption{Portfolio sorted by expected stock returns, for different number of classes (K).}
+    \label{fig:port_mu_diff_k}
+\end{figure}
 
+\clearpage
+\begin{figure}[htbp]
+    \vfill
+    \centering
+    \includegraphics[width=1\textwidth]{Figures/port_mu_diff_np_tf.png}
+    \caption{Portfolio sorted by expected stock returns, Encoder-Only Transformer.}
+    \label{fig:port_mu_diff_np_tf}
+\end{figure}
+
+\clearpage
+\begin{figure}[htbp]
+    \vfill
+    \centering
+    \includegraphics[width=1\textwidth]{Figures/port_diff_char.png}
+    \caption{Portfolio sorted by beta, size, book-to-market, momentum.}
+    \label{fig:port_diff_char}
+\end{figure}
 
 
 \end{document}
