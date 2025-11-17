@@ -175,7 +175,7 @@ For multi-class classification ($K > 2$), the stock returns can be discretized i
 In general, we denote $y_{i, t}$ as the categorical variable indicating which class stock $i$'s return falls into at time $t$:
 \begin{align}
     y_{i, t} &= k, \quad \text{if } r_{i,t}^H \in (q_{k-1}, q_k], \quad k = 1, 2, ..., K \\
-    \hat{y}_{i,t}^k &= \mathbf{p}_{i,t}(k) = \hat{P}\left(r_{i,t}^H \in (q_{k-1}, q_k]\right)
+    \hat{y}_{i,t}^k &= \mathbf{p}_{i,t}(k) = \mathbb{P}\left(r_{i,t}^H \in (q_{k-1}, q_k]\right)
 \end{align}
 
 \subsection{Training Process} \label{sec:training}
