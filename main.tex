@@ -209,7 +209,7 @@ We begin with the simplest binary classification problem ($K = 2$). Following \c
 
 We focus on the prediction of 1-month ahead stock returns ($H=21$ trading days), which is common in the literature of cross-section of stock returns studies. We consider four different model specifications: (1) Temporal Transformer (TF) model with only stock volatility surface as input, the lookback window is $L=21$ days, covering the last month. Since the volatility surface data contains 10 maturities ($N_{\tau}=10$) and 18 moneyness levels ($N_{\delta}=18$), we call this model \textbf{TF180}; (2) Temporal Transformer (TF) model with both stock and index volatility surfaces as input, the lookback window is also $L=21$ days, resulting in an input size of $2 \times 10 \times 18 = 360$ features per day, we call this model \textbf{TF360}; (3) Vision Transformer (ViT) model with only stock volatility surface as input, we call this model \textbf{ViT180}; (4) Channel Vision Transformer (Channel ViT) model with both stock and index volatility surfaces as input, we call this model \textbf{ViT360}.
 
-Table \ref{tab:portfolio_binary_full} reports the portfolio performance of equal-weight and value-weight decile portfolios, including a long-short spread portfolio "10-1", formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$ in each month's end, with a holding period of one month. All the four model specifications generate significant positive returns for the long-short portfolio. Moreover, Figure \ref{fig:port_binary_full} plot the decile portfolio returns, as well as two of the most prominent option-base predictors in the literature: the implied volatility spread between ATM call and put options (\textbf{IVSpread}) defined in \citet{yanJumpRiskStock2011}, and the implied volatility skew betwen OTM put and ATM call options (\textbf{IVSkew}) defined in \citet{xingWhatDoesIndividual2010}. More details about these two predictors are provided in Appendix \ref{sec:appendixb}. 
+Table \ref{tab:portfolio_binary_full} reports the portfolio performance of equal-weight and value-weight decile portfolios, including a long-short spread portfolio "10-1", formed on out-of-sample predicted "up" probability $\mathbb{P}(r_{i,t}^{21} > 0)$ in each month's end, with a holding period of one month. All the four model specifications generate significant positive returns for the long-short portfolio. Moreover, Figure \ref{fig:port_binary_full} plot the decile portfolio returns, as well as two of the most prominent option-base predictors in the literature: the implied volatility spread between ATM call and put options (\textbf{IVSpread}) defined in \citet{yanJumpRiskStock2011}, and the implied volatility skew betwen OTM put and ATM call options (\textbf{IVSkew}) defined in \citet{xingWhatDoesIndividual2010}. More details about these two predictors are provided in Appendix \ref{sec:appendixb}. 
 
 As mentioned in \citet{muravyevWhyDoesOptions2025}, the spreads of the two predictors stem from the decile one's (short-leg) underperformance, while the returns in higher deciles are relatively flat. This is consistent with the intuition that options market contains more information about the extreme negative returns (left tail) since investors are more likely to join the options market for hedging purposes. The decile portfolio returns from our four Transformer-based models present a similar pattern, where the long legs are relatively flat and close to the two spread predictors but the short legs generate lower returns. This indicates that our models are able to capture more information about the downside risk, excelling the performance of the two spread predictors.
 
@@ -231,16 +231,34 @@ In this section, we extend our analysis to multi-class classification problems (
 
 For each class $k$, we approximately assume that the stock returns falling into class $k$ follow a uniform distribution within the interval $(q_{k-1}, q_k]$. Therefore, the predicted probability $\hat{y}_{i,t}^k$ can be interpreted as the likelihood of stock $i$'s return falling into the interval $(q_{k-1}, q_k]$ at time $t$. Based on this interpretation, we can estimate the moment forecasts of the stock returns using the predicted probabilities from the multi-class classification model.
 \begin{align}
-    \mathbb{E}(r_{i,t}^H)  &\approx \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \bar{q}_k \\
-    \operatorname{Var}(r_{i,t}^H) &\approx \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \left(\bar{q}_k - \mathbb{E}(r_{i,t}^H)\right)^2 \\
-    \operatorname{Skew}(r_{i,t}^H) &\approx \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \left(\bar{q}_k - \mathbb{E}(r_{i,t}^H)\right)^3 / \left(\operatorname{Var}(r_{i,t}^H)\right)^{3/2} \\
-    \operatorname{Kurt}(r_{i,t}^H) &\approx \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \left(\bar{q}_k - \mathbb{E}(r_{i,t}^H)\right)^4 / \left(\operatorname{Var}(r_{i,t}^H)\right)^{2}
+    \mathbb{E}(r_{i,t}^H)  &= \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \bar{q}_k \\
+    \operatorname{Var}(r_{i,t}^H) &= \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \left(\bar{q}_k - \mathbb{E}(r_{i,t}^H)\right)^2 \\
+    \operatorname{Skew}(r_{i,t}^H) &= \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \left(\bar{q}_k - \mathbb{E}(r_{i,t}^H)\right)^3 / \left(\operatorname{Var}(r_{i,t}^H)\right)^{3/2} \\
+    \operatorname{Kurt}(r_{i,t}^H) &= \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \left(\bar{q}_k - \mathbb{E}(r_{i,t}^H)\right)^4 / \left(\operatorname{Var}(r_{i,t}^H)\right)^{2}
 \end{align}
 Where $\bar{q}_k = (q_{k-1} + q_k) / 2$ is the midpoint of the interval $(q_{k-1}, q_k]$. The estimated $\mathbb{E}(r_{i,t}^H)$, $\operatorname{Var}(r_{i,t}^H)$, $\operatorname{Skew}(r_{i,t}^H)$, and $\operatorname{Kurt}(r_{i,t}^H)$ represent the predicted mean, variance, skewness, and kurtosis of stock $i$'s return from day $t$ to day $t+H$, respectively.
 
-Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by the predicted mean return $\mathbb{E}(r_{i,t}^{21})$ are broadly increasing with the portfolio's average $\mathbb{E}(r_{i,t}^{21})$, and the predicted mean return captures significant cross-sectional variation in stock returns, with a R-squared from 77.1\% to 93.7\%. In this section, we focus on the ViT360 model, and select $K=100$ classes (percentile bins) for the multi-class classification. The results from other model specification (TF360) are reported in Figure \ref{fig:port_mu_diff_np_tf} and using different number of classes ($K=10, 20, 50$) are reported in Figure \ref{fig:port_mu_diff_k}. We also report the results using beta, size, book-to-market ratio, and momentum portfolios in Figure \ref{fig:port_diff_char}.
+Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by the predicted mean return $\mathbb{E}(r_{i,t}^{21})$ are broadly increasing with the portfolio's average predicted mean return $\mathbb{E}(r_{i,t}^{21})$, and the predicted mean return captures significant cross-sectional variation in stock returns, with a R-squared ranging from 77.1\% to 93.7\%. In this section, we focus on the \textbf{ViT360} model, and select $K=100$ classes (percentile bins) for the multi-class classification, which performs the best compared to other specification like \textbf{TF360} (see Figure \ref{fig:port_mu_diff_np_tf}), and other choices of $K$ (see Figure \ref{fig:port_mu_diff_k}). We also report the results using other characteristic-sorted portfolios in Figure \ref{fig:port_diff_char} as a preliminary check.
 
+\subsection{Multi-Class Classification: Joint Distribution of Stock and Market Returns} \label{sec:multi_joint}
+In this section, we further explore the capability of our Transformer-based models to recover the joint distribution of individual stock returns and market returns. 
 
+The first challenge we face is the discretization of the joint distribution. Since the individual stock returns are positively correlated with the market returns in general, we cannot simply discretize the two returns independently, which would lead to a large number of empty or sparse joint classes. Instead, we consider two methods to mitigate this issues. First, we use a popular unsupervised learning algorithm, K-means clustering \citep{mcqueenMethodsClassificationAnalysis1967}, to group the joint return observations into $K$ clusters based on their Euclidean distances in the two-dimensional return space. Each cluster represents a joint class, and the centroids of the clusters can be used as representative points for each class. Figure \ref{fig:kmeans_2D_100} shows the clustering results with $K=100$ clusters. Second, even the K-Means clustering cannot ensure a fully balanced class distribution, we need to use the weighted cross-entropy loss function described in Section \ref{sec:training} to address the class imbalance issue during training. 
+
+For each class $k$, we denote the centroid of the cluster as $(\bar{r}_s^{k}, \bar{r}_m^{k})$. Similar to the previous section, we can estimate the moments of both individual stock returns and market returns using the predicted probabilities $\hat{y}_{i,t}^k$ from the multi-class classification model. A important benefit of this approach is that we can also estimate the predicted covariance between the individual stock returns and market returns:
+\begin{align}
+    \operatorname{Cov}(r_{i,t}^H, r_{m,t}^H) &= \sum_{k=1}^{K} \hat{y}_{i,t}^k \cdot \left(\bar{r}_s^{k} - \mathbb{E}(r_{i,t}^H)\right) \cdot \left(\bar{r}_m^{k} - \mathbb{E}(r_{m,t}^H)\right)
+\end{align}
+
+Furthermore, we can estimate the predicted Capital Asset Pricing Model (CAPM) beta of individual stocks using the predicted covariance and variance:
+\begin{align}
+    \beta_{i,t}^{fwd} &= \frac{\operatorname{Cov}(r_{i,t}^H, r_{m,t}^H)}{\operatorname{Var}(r_{m,t}^H)}
+\end{align}
+
+Expected stock return conditional on the market crash can be estimated as:
+\begin{align}
+    \mathbb{E}(r_{i,t}^H | r_{m,t}^H < q_{crash}) &= \frac{\sum_{k: \bar{r}_m^{k} < q_{crash}} \hat{y}_{i,t}^k \cdot \bar{r}_s^{k}}{\sum_{k: \bar{r}_m^{k} < q_{crash}} \hat{y}_{i,t}^k}
+\end{align}
 
 \section{Conclusion} \label{sec:conclusion}
 
@@ -280,7 +298,7 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
 \begin{tablenotes}
     % \footnotesize
     % \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
-    \item This table reports the monthly average returns of equal-weight (top panel) and value-weight (bottom panel) decile portfolios formed on the out-of-sample predicted "up" probability $\hat{P}(r_{i,t+1}^{21} > 0)$ from four different model specifications described in Section \ref{sec:binary_classification}. The long-short portfolio ($10 - 1$) is formed by longing the highest decile and shorting the lowest decile. The portfolios are rebalanced monthly and held for one month. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
+    \item This table reports the monthly average returns of equal-weight (top panel) and value-weight (bottom panel) decile portfolios formed on the out-of-sample predicted "up" probability $\mathbb{P}(r_{i,t}^{21} > 0)$ from four different model specifications described in Section \ref{sec:binary_classification}. The long-short portfolio ($10 - 1$) is formed by longing the highest decile and shorting the lowest decile. The portfolios are rebalanced monthly and held for one month. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
@@ -314,7 +332,7 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
     table-space-text-post = {)} 
 }
 \begin{threeparttable}
-\caption{Correlation Analysis}
+\caption{Correlation Analysis, Binary Classification Model, All Stocks}
 \label{tab:corr_binary_models}
 \input{Tables/corr_binary_models.tex}
 \begin{tablenotes}
@@ -359,7 +377,7 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
 \begin{threeparttable}
 \input{Tables/ts_reg_binary_models.tex}
 \begin{tablenotes}
-\item This table reports the alpha and factor loadings from the time series regression of the long-short ($10 - 1$) value-weighted portfolio returns on the Fama-French 5 factors \citep{famaFivefactorAssetPricing2015} augmented with the momentum factor \citep{carhartPersistenceMutualFund1997}. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
+\item This table reports the alpha and factor loadings from the time series regression of the long-short ($10 - 1$) value-weighted portfolio returns on the Fama-French 5 factors \citep{famaFivefactorAssetPricing2015} augmented with the momentum factor \citep{carhartPersistenceMutualFund1997}. The portfolio is formed on the out-of-sample predicted "up" probability $\mathbb{P}(r_{i,t}^{21} > 0)$ from four different model specifications described in Section \ref{sec:binary_classification}. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
@@ -379,7 +397,7 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
 \begin{threeparttable}
 \input{Tables/ts_reg_binary_models_alt.tex}
 \begin{tablenotes}
-\item This table reports the alpha and factor loadings from the time series regression of the long-short ($10 - 1$) value-weighted portfolio returns on a set of option-based factors described in Appendix \ref{sec:appendixb}. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
+\item This table reports the alpha and factor loadings from the time series regression of the long-short ($10 - 1$) value-weighted portfolio returns on a set of option-based factors described in Appendix \ref{sec:appendixb}. The portfolio is formed on the out-of-sample predicted "up" probability $\mathbb{P}(r_{i,t}^{21} > 0)$ from four different model specifications described in Section \ref{sec:binary_classification}. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
@@ -459,12 +477,12 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
     table-space-text-pre = {(},
     table-space-text-post = {)} 
 }
-\caption{Summary Statistics of Quantile100 Classification}
+\caption{Summary Statistics of Predicted Moments, Quantile100 Classification}
 \label{tab:quantile100_summary_stats}
 \begin{threeparttable}
 \input{Tables/quantile100_summary_stats.tex}
 \begin{tablenotes}
-    \item This table reports
+    \item This table provides summary statistics for the out-of-sample predicted 1-month stock returns moments described in Section \ref{sec:multi_quantile}, using the \textbf{ViT360} model with 100 quantile classes. The sample period is from January 2004 to August 2023. At the end of each month, we calculate the cross-sectional statistics of the predicted moments, and then report the time series averages of these statistics. We also report the realized stock return and realized volatility for comparison.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
@@ -485,54 +503,10 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
 \begin{threeparttable}
 \input{Tables/ts_reg_quantile100_crsp.tex}
 \begin{tablenotes}
-    \item This table reports
+    \item This table reports the alpha and factor loadings from the time series regression of the long-short ($10 - 1$) value-weighted portfolio returns sorted by the predicted mean return $\mathbb{E}(r_{i,t}^{21})$ described in Section \ref{sec:multi_quantile}, using the \textbf{ViT360} model with 100 quantile classes. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
-
-\clearpage
-\begin{table}[htbp]
-\centering
-\setlength{\tabcolsep}{6pt}
-\small
-\sisetup{
-    table-align-text-post=false,
-    input-symbols = {(),-},
-    table-space-text-pre = {(},
-    table-space-text-post = {)} 
-}
-\caption{Fama-MacBeth Regression, Quantile100 Classification}
-\label{tab:fm_reg_quantile100_crsp}
-\begin{threeparttable}
-\input{Tables/fm_reg_quantile100_crsp.tex}
-\begin{tablenotes}
-    \item This table reports
-\end{tablenotes}
-\end{threeparttable}
-\end{table}
-
-
-\clearpage
-\begin{table}[htbp]
-\centering
-\setlength{\tabcolsep}{6pt}
-\small
-\sisetup{
-    table-align-text-post=false,
-    input-symbols = {(),-},
-    table-space-text-pre = {(},
-    table-space-text-post = {)} 
-}
-\caption{Summary Statistics of K-Means Clustering, 100 Clusters}
-\label{tab:kmeans100_summary_stats}
-\begin{threeparttable}
-\input{Tables/kmeans100_summary_stats.tex}
-\begin{tablenotes}
-    \item This table reports
-\end{tablenotes}
-\end{threeparttable}
-\end{table}
-
 
 \clearpage
 \begin{table}[htbp]
@@ -545,16 +519,16 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
     table-space-text-pre = {(},
     table-space-text-post = {)} 
 }
-\caption{Portfolio Returns, K-Means Clustering}
-\label{tab:portfolio_kmeans_mu_s}
+\caption{Fama-MacBeth Regression, Quantile100 Classification}
+\label{tab:fm_reg_quantile100_crsp}
 \begin{threeparttable}
-\input{Tables/portfolio_kmeans.tex}
+\input{Tables/fm_reg_quantile100_crsp.tex}
 \begin{tablenotes}
-    \footnotesize
-    \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
+    \item This table reports the \citet{famaRiskReturnEquilibrium1973} regression results of future 1-month stock returns on the predicted stock return moments described in Section \ref{sec:multi_quantile}, using the \textbf{ViT360} model with 100 quantile classes. The sample period is from January 2004 to August 2023. The t-statistics are calculated using \citet{neweySimplePositiveSemiDefinite1987} adjusted standard errors with 6 lags, and reported in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
+
 
 \clearpage
 \begin{table}[htbp]
@@ -567,10 +541,57 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
     table-space-text-pre = {(},
     table-space-text-post = {)} 
 }
-\caption{Cross-Sectional Regression, K-Means Clustering, 100 Clusters}
+\caption{Summary Statistics of Predicted Moments, K-Means Clustering}
+\label{tab:kmeans100_summary_stats}
+\begin{threeparttable}
+\input{Tables/kmeans100_summary_stats.tex}
+\begin{tablenotes}
+    \item This table provides summary statistics for the out-of-sample predicted 1-month stock and market returns joint distribution moments described in Section \ref{sec:multi_joint}, using the \textbf{ViT360} model with K-Means clustering of 100 clusters. The sample period is from January 2004 to August 2023 and we use the stocks included in the S\&P 500 index at each month-end. At the end of each month, we calculate the cross-sectional statistics of the predicted moments, and then report the time series averages of these statistics. We also report the realized stock return, realized volatility and historical CAPM beta for comparison.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+
+% \clearpage
+% \begin{table}[htbp]
+% \centering
+% \setlength{\tabcolsep}{2pt}
+% \small
+% \sisetup{
+%     table-align-text-post=false,
+%     input-symbols = {(),-},
+%     table-space-text-pre = {(},
+%     table-space-text-post = {)} 
+% }
+% \caption{Portfolio Returns, K-Means Clustering}
+% \label{tab:portfolio_kmeans_mu_s}
+% \begin{threeparttable}
+% \input{Tables/portfolio_kmeans.tex}
+% \begin{tablenotes}
+%     \footnotesize
+%     \item Note: $^{***} p < 0.01$; $^{**} p < 0.05$; $^{*} p < 0.1$
+% \end{tablenotes}
+% \end{threeparttable}
+% \end{table}
+
+\clearpage
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{6pt}
+\small
+\sisetup{
+    table-align-text-post=false,
+    input-symbols = {(),-},
+    table-space-text-pre = {(},
+    table-space-text-post = {)} 
+}
+\caption{Cross-Sectional Regression, K-Means Clustering}
 \label{tab:cs_reg_beta}
 \begin{threeparttable}
 \input{Tables/cs_reg_beta.tex}
+\begin{tablenotes}
+    \item This table reports the results of the cross-sectional regression tests for the Capital Asset Pricing Model (CAPM). At the end of each month, we sort the stocks into 10, 25 and 50 portfolios based on their model-implied beta ($\beta^{fwd}$), as well as the historical CAPM beta ($\beta^{hist}$) calculated using the past 252 trading days' returns. For each portfolio, we calculate the value-weighted portfolio beta measures and the value-weighted portfolio realized excess returns over the next month. We then regress the time-series mean of the portfolio excess returns on a constant and the time-series mean of portfolio beta measures. The sample period is from January 2004 to August 2023 and we use the stocks included in the S\&P 500 index at each month-end. The standard errors are provided in parentheses. $^{***}$, $^{**}$, and $^{*}$ denote statistical significance at the 1\%, 5\%, and 10\% levels, respectively.
+\end{tablenotes}
 \end{threeparttable}
 \end{table}
 
@@ -641,8 +662,8 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
 \begin{figure}[htbp]
     \vfill
     \centering
-    \includegraphics[width=1\textwidth]{Figures/port_binary_full.png}
-    \caption{Portfolio Performance from Different Models.}
+    \includegraphics[width=0.8\textwidth]{Figures/port_binary_full.png}
+    \caption{Portfolio Performance from Different Models. This figure shows the portfolio returns formed on out-of-sample predicted "up" probability $\mathbb{P}(r_{i,t}^{21} > 0)$ from different model specifications described in Section \ref{sec:binary_classification}, as well as the \textbf{IVSpread} and \textbf{IVSkew} characteristics described in Appendix \ref{sec:appendixb}. The upper panel shows the equal-weighted portfolio returns, while the lower panel shows the value-weighted portfolio returns. More details are provided in Table \ref{tab:portfolio_binary_full}.}
     \label{fig:port_binary_full}
 \end{figure}
 
@@ -660,7 +681,7 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
     \vfill
     \centering
     \includegraphics[width=1\textwidth]{Figures/cumret_binary_sp.png}
-    \caption{Cumulative Returns, S\&P 500 Stocks. This figure shows the cumulative log return of equal-weight decile portfolios formed on out-of-sample predicted "up" probability $\hat{P}(r_{i,t}^{21} > 0)$ from January 2004 to August 2023. The sample includes only stocks that are part of the S\&P 500 index. The "Low" series represents the 1/3 stocks with the lowest predicted "up" probabilities, while the "High" series represents the 2/3 stocks with the highest predicted "up" probabilities. The "SPY" series represents the cumulative log return of the S\&P 500 index ETF (SPY) over the same period.}
+    \caption{Cumulative Returns Performance. This figure shows the cumulative returns of equal-weight decile portfolios formed on out-of-sample predicted "up" probability $\mathbb{P}(r_{i,t}^{21} > 0)$ from January 2004 to August 2023 using the \textbf{ViT360} model described in Section \ref{sec:binary_classification}. The sample includes only stocks that are part of the S\&P 500 index. The "Low" series represents the 1/3 stocks with the lowest predicted "up" probabilities, while the "High" series represents the 2/3 stocks with the highest predicted "up" probabilities. The "SPY" series represents the cumulative return of the S\&P 500 index ETF (SPY) over the same period.}
     \label{fig:cumlogret_binary_sp}
 \end{figure}
 
@@ -670,7 +691,8 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
     \vfill
     \centering
     \includegraphics[width=1\textwidth]{Figures/port_mu_diff_np.png}
-    \caption{Portfolio sorted by expected stock returns, for different number of portfolios.}
+    \caption{Portfolio sorted by expected stock returns $\mathbb{E}(r_{i,t}^{21})$. This figure shows the portfolio returns formed on out-of-sample predicted mean return $\mathbb{E}(r_{i,t}^{21})$ using the \textbf{ViT360} model with 100 quantile classes described in Section \ref{sec:multi_quantile}. The horizon is one month (21 trading days). At the end of each month, stocks are sorted into 10, 25, 50, or 100 portfolios based on their predicted mean returns $\mathbb{E}(r_{i,t}^{21})$. For each portfolio, we compute the value-weighted portfolio returns over the next month and the value-weighted portfolio average predicted mean return.
+    We then plot the time-series average portfolio returns against the average predicted mean returns. The black line represents the fitted linear regression line, with the slope coefficient and R-squared value indicated in the legend. The grey dashed line represents the 45-degree line for reference. The sample period is from January 2004 to August 2023.}
     \label{fig:port_mu_diff_np}
 \end{figure}
 
@@ -681,7 +703,7 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
     \vfill
     \centering
     \includegraphics[width=1\textwidth]{Figures/kmeans_2D_100.png}
-    \caption{Classification Visualization (K-Means Clustering)}
+    \caption{K-Means Clustering of Stock and Market Returns. This figure shows the K-Means clustering results with 100 clusters for the joint distribution of individual stock returns and market returns. Each point represents a joint observation of stock return and market return, colored according to its assigned cluster. The centroids of the clusters are marked with black crosses. The x-axis represents the individual stock returns, while the y-axis represents the market returns. The clustering is performed using the Euclidean distance in the two-dimensional return space. Both stock and market returns are winsorized at the 0.01\% and 99.99\% levels for extreme value control.}
     \label{fig:kmeans_2D_100}
 \end{figure}
 
@@ -699,7 +721,7 @@ Figure \ref{fig:port_mu_diff_np} shows that average portfolio returns sorted by 
     \vfill
     \centering
     \includegraphics[width=1\textwidth]{Figures/cumret_kmeans_sp.png}
-    \caption{Cumulative Returns, S\&P 500 Stocks (K-Means Clustering, 100 Clusters)}
+    \caption{Cumulative Returns, S\&P 500 Stocks. This figure shows the cumulative returns of equal-weight portfolios formed on out-of-sample predicted expected stock returns conditional on market crashes $\mathbb{E}(r_{i,t}^{21} | r_{m,t}^{21} \leq -0.2)$ using the \textbf{ViT360} model with K-Means clustering of 100 clusters described in Section \ref{sec:multi_joint}. The sample includes only stocks that are part of the S\&P 500 index. The "Low" series represents the 1/3 stocks with the lowest predicted conditional expected returns, while the "High" series represents the 2/3 stocks with the highest predicted conditional expected returns. The "SPY" series represents the cumulative return of the S\&P 500 index ETF (SPY) over the same period.}
     \label{fig:cumret_kmeans_sp}
 \end{figure}
 
@@ -933,7 +955,7 @@ Besides these option-based characteristics, we also include the following common
     \vfill
     \centering
     \includegraphics[width=1\textwidth]{Figures/port_mu_diff_np_tf.png}
-    \caption{Portfolio sorted by expected stock returns, Encoder-Only Transformer.}
+    \caption{Portfolio sorted by expected stock returns, \textbf{TF360} model.}
     \label{fig:port_mu_diff_np_tf}
 \end{figure}
 
